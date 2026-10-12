@@ -39,52 +39,93 @@
         <a href="<?= site_url($token . '/kendaraan/' . $nopol_enc) ?>"
             class="daftar-row"
             data-search="<?= htmlspecialchars(strtolower($k['nopol'] . ' ' . ($k['tipe'] ?: ''))) ?>"
-            style="display:flex; align-items:center; justify-content:space-between;
-                    padding:14px 18px; text-decoration:none; color:var(--movas-text);
-                    border-bottom:1px solid var(--movas-border); transition:background 0.15s;"
+            style="display:flex; flex-direction:column;
+                   padding:14px 18px; text-decoration:none; color:var(--movas-text);
+                   border-bottom:1px solid var(--movas-border); transition:background 0.15s;"
             onmouseover="this.style.background='rgba(255,255,255,0.03)'"
             onmouseout="this.style.background=''">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:36px; height:36px; background:var(--movas-surface2);
-                            border-radius:8px; display:flex; align-items:center;
-                            justify-content:center; font-size:16px;">
-                    <?php if (strtolower($k['jenis_kendaraan']) === 'motor'): ?>
-                        <i class="fas fa-motorcycle" style="color:var(--movas-cyan);"></i>
-                    <?php else: ?>
-                        <i class="fas fa-car" style="color:var(--movas-cyan);"></i>
+
+            <!-- Baris info kendaraan -->
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:36px; height:36px; background:var(--movas-surface2);
+                                border-radius:8px; display:flex; align-items:center;
+                                justify-content:center; font-size:16px;">
+                        <?php if (strtolower($k['jenis_kendaraan']) === 'motor'): ?>
+                            <i class="fas fa-motorcycle" style="color:var(--movas-cyan);"></i>
+                        <?php else: ?>
+                            <i class="fas fa-car" style="color:var(--movas-cyan);"></i>
+                        <?php endif; ?>
+                    </div>
+                    <div>
+                        <div style="font-size:14px; font-weight:600;">
+                            <?= htmlspecialchars($k['nopol']) ?>
+                        </div>
+                        <div style="font-size:11px; color:var(--movas-text2);">
+                            <?= htmlspecialchars($k['tipe'] ?: $k['jenis_kendaraan']) ?>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:13px; font-weight:600; color:var(--movas-cyan);">
+                        <?= $k['total_service'] ?>x service
+                    </div>
+                    <div style="font-size:11px; color:var(--movas-text3);">
+                        <?php
+                        if ($k['terakhir_service']) {
+                            $bulan = ['01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
+                                      '05'=>'Mei','06'=>'Jun','07'=>'Jul','08'=>'Agu',
+                                      '09'=>'Sep','10'=>'Okt','11'=>'Nov','12'=>'Des'];
+                            echo date('d', strtotime($k['terakhir_service'])) . ' '
+                               . $bulan[date('m', strtotime($k['terakhir_service']))] . ' '
+                               . date('Y', strtotime($k['terakhir_service']));
+                        }
+                        ?>
+                    </div>
+                    <?php if ($k['has_kondisi']): ?>
+                    <div style="font-size:10px; color:var(--movas-safe);">
+                        <i class="fas fa-check-circle"></i> Ada data kondisi
+                    </div>
                     <?php endif; ?>
                 </div>
+            </div>
+
+            <!-- ── Reminder ──────────────────────────────────────────── -->
+            <?php if (!empty($k['reminder'])):
+                $r       = $k['reminder'];
+                $sisa    = intval($r['sisa_hari']);
+                $bulan   = ['01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
+                            '05'=>'Mei','06'=>'Jun','07'=>'Jul','08'=>'Agu',
+                            '09'=>'Sep','10'=>'Okt','11'=>'Nov','12'=>'Des'];
+                $tgl_fmt = date('d', strtotime($r['tgl_reminder'])) . ' '
+                        . $bulan[date('m', strtotime($r['tgl_reminder']))] . ' '
+                        . date('Y', strtotime($r['tgl_reminder']));
+                $color   = $sisa <= 7
+                    ? 'var(--movas-danger)'
+                    : ($sisa <= 14 ? 'var(--movas-warn)' : 'var(--movas-cyan)');
+            ?>
+            <div style="margin-top:10px; padding:8px 12px;
+                        background:rgba(0,180,216,0.07);
+                        border-left:3px solid <?= $color ?>;
+                        border-radius:0 8px 8px 0;
+                        display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-bell" style="color:<?= $color ?>; font-size:12px; flex-shrink:0;"></i>
                 <div>
-                    <div style="font-size:14px; font-weight:600;">
-                        <?= htmlspecialchars($k['nopol']) ?>
+                    <div style="font-size:10px; color:var(--movas-text3);
+                                text-transform:uppercase; letter-spacing:0.5px;">
+                        Reminder Service
                     </div>
-                    <div style="font-size:11px; color:var(--movas-text2);">
-                        <?= htmlspecialchars($k['tipe'] ?: $k['jenis_kendaraan']) ?>
+                    <div style="font-size:12px; font-weight:600; color:var(--movas-text);">
+                        <?= $tgl_fmt ?>
+                        <span style="font-size:11px; color:<?= $color ?>; font-weight:400;">
+                            (<?= $sisa ?> hari menuju jadwal service)
+                        </span>
                     </div>
                 </div>
             </div>
-            <div style="text-align:right;">
-                <div style="font-size:13px; font-weight:600; color:var(--movas-cyan);">
-                    <?= $k['total_service'] ?>x service
-                </div>
-                <div style="font-size:11px; color:var(--movas-text3);">
-                    <?php
-                    if ($k['terakhir_service']) {
-                        $bulan = ['01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
-                                  '05'=>'Mei','06'=>'Jun','07'=>'Jul','08'=>'Agu',
-                                  '09'=>'Sep','10'=>'Okt','11'=>'Nov','12'=>'Des'];
-                        echo date('d', strtotime($k['terakhir_service'])) . ' '
-                           . $bulan[date('m', strtotime($k['terakhir_service']))] . ' '
-                           . date('Y', strtotime($k['terakhir_service']));
-                    }
-                    ?>
-                </div>
-                <?php if ($k['has_kondisi']): ?>
-                <div style="font-size:10px; color:var(--movas-safe);">
-                    <i class="fas fa-check-circle"></i> Ada data kondisi
-                </div>
-                <?php endif; ?>
-            </div>
+            <?php endif; ?>
+            <!-- ── End Reminder ──────────────────────────────── -->
+
         </a>
         <?php endforeach; ?>
     </div>

@@ -202,10 +202,22 @@
     </div>
 </nav>
 
+<!-- Bubble teks AI -->
+<div id="movas-ai-bubble-text"></div>
+
+<!-- Tombol X untuk sembunyikan FAB -->
+<div id="movas-ai-close-fab"
+     onclick="hideFab()"
+     onmouseover="this.style.background='rgba(231,74,59,0.8)'"
+     onmouseout="this.style.background='rgba(0,0,0,0.5)'"
+     title="Sembunyikan">
+    &times;
+</div>
+
 <!-- ── MOVAS AI CHAT ─────────────────────────────────────── -->
 <div id="movas-ai-fab" onclick="toggleAIChat()"
      style="position:fixed; bottom:calc(var(--bottom-nav-h) + 16px); right:16px;
-            width:52px; height:52px; border-radius:50%;
+            width:60px; height:60px; border-radius:50%;
             background:linear-gradient(135deg, #1a2d7c, #00b4d8);
             display:flex; align-items:center; justify-content:center;
             cursor:pointer; z-index:500;
@@ -214,8 +226,8 @@
      onmouseover="this.style.transform='scale(1.1)'"
      onmouseout="this.style.transform='scale(1)'"
      title="Tanya MOVAS AI">
-    <img src="<?= base_url() ?>assets/backend/img/movas-robot-no-text.png"
-         style="width:32px; height:32px; object-fit:contain;">
+    <img src="<?= base_url() ?>assets/backend/img/movas-robot.gif"
+     style="width:48px; height:48px; object-fit:contain; margin-top:5px;">
     <!-- Notif badge -->
     <span id="ai-badge" style="display:none; position:absolute;
           top:-2px; right:-2px; width:10px; height:10px;
@@ -240,7 +252,7 @@
                 padding:12px 16px; display:flex;
                 align-items:center; justify-content:space-between;">
         <div style="display:flex; align-items:center; gap:10px;">
-            <img src="<?= base_url() ?>assets/backend/img/movas-robot.png"
+            <img src="<?= base_url() ?>assets/backend/img/movas-robot-no-text.png"
                  style="width:28px; height:28px; object-fit:contain;">
             <div>
                 <div style="font-size:13px; font-weight:700; color:#fff;">MOVAS AI</div>
@@ -274,12 +286,22 @@
     </div>
 
     <!-- Typing indicator -->
+    <!-- Update HTML typing indicator di layout.php -->
     <div id="ai-typing" style="display:none; padding:0 12px 8px;">
         <div class="ai-bubble assistant" style="margin:0;">
             <div class="ai-bubble-content" style="padding:10px 14px;">
                 <span class="ai-typing-dot"></span>
                 <span class="ai-typing-dot"></span>
                 <span class="ai-typing-dot"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Elemen terpisah untuk pesan tunggu -->
+    <div id="ai-waiting-msg" style="display:none; padding:0 12px 8px;">
+        <div class="ai-bubble assistant" style="margin:0;">
+            <div class="ai-bubble-content" id="ai-waiting-text"
+                style="padding:10px 14px; font-size:11px; color:var(--movas-text3);">
             </div>
         </div>
     </div>
@@ -592,6 +614,104 @@
         });
     }
 
+
+    function hideFab() {
+            var fab    = document.getElementById('movas-ai-fab');
+            var close  = document.getElementById('movas-ai-close-fab');
+            var bubble = document.getElementById('movas-ai-bubble-text');
+
+            if (fab)    fab.classList.add('fab-hidden');
+            if (close)  close.style.display = 'none';
+            if (bubble) bubble.classList.remove('show');
+            clearInterval(aiBubbleTimer);
+
+            // ← Simpan status hidden ke sessionStorage
+            try { sessionStorage.setItem('movas_fab_hidden', '1'); } catch(e) {}
+        }
+
+        window.addEventListener('beforeunload', function() {
+        // Reset visited saat tab ditutup atau reload
+        try { sessionStorage.removeItem('movas_visited'); } catch(e) {}
+    });
+
+    // ── FAB ENTRANCE ───────────────────────────────────────────
+    window.addEventListener('load', function() {
+        // Cek apakah fab sudah disembunyikan user
+        var fabHidden = false;
+        try { fabHidden = sessionStorage.getItem('movas_fab_hidden') === '1'; } catch(e) {}
+
+        if (fabHidden) return; // jangan tampilkan
+
+        // Cek apakah sudah pernah visit di sesi ini (bukan reload)
+        var sudahVisit = false;
+        try { sudahVisit = sessionStorage.getItem('movas_visited') === '1'; } catch(e) {}
+
+        if (!sudahVisit) {
+            // Pertama kali masuk — tampilkan FAB
+            try { sessionStorage.setItem('movas_visited', '1'); } catch(e) {}
+
+            setTimeout(function() {
+                var fab   = document.getElementById('movas-ai-fab');
+                var close = document.getElementById('movas-ai-close-fab');
+                if (fab)   fab.classList.add('fab-visible');
+                if (close) close.classList.add('fab-visible');
+            }, 800);
+        } else {
+            // Sudah pernah visit — langsung tampilkan tanpa animasi
+            var fab   = document.getElementById('movas-ai-fab');
+            var close = document.getElementById('movas-ai-close-fab');
+            if (fab)   { fab.style.transition = 'none'; fab.classList.add('fab-visible'); }
+            if (close) { close.style.transition = 'none'; close.classList.add('fab-visible'); }
+        }
+    });
+
+    // ── VISIBILITY CHANGE ──────────────────────────────────────
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            // Tab tidak aktif — hentikan semua timer
+            clearInterval(aiBubbleTimer);
+            aiBubbleTimer = null;
+
+            // Clear typewriter jika sedang berjalan
+            if (window._bubbleTypewriter) {
+                clearInterval(window._bubbleTypewriter);
+                window._bubbleTypewriter = null;
+            }
+
+            // Sembunyikan bubble
+            var el = document.getElementById('movas-ai-bubble-text');
+            if (el) {
+                el.classList.remove('show');
+                el.textContent = '';
+            }
+
+            // Reset index agar mulai dari awal
+            aiBubbleIdx = 0;
+
+        } else {
+            // Tab aktif kembali
+            var fabHidden = false;
+            try { fabHidden = sessionStorage.getItem('movas_fab_hidden') === '1'; } catch(e) {}
+
+            if (!fabHidden && !aiChatOpen) {
+                // Tunggu sebentar sebelum mulai lagi
+                setTimeout(function() {
+                    showAIBubble();
+                }, 1500);
+            }
+        }
+    });
+
+    // ── FAB ENTRANCE ───────────────────────────────────────────
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            var fab   = document.getElementById('movas-ai-fab');
+            var close = document.getElementById('movas-ai-close-fab');
+            if (fab)   fab.classList.add('fab-visible');
+            if (close) close.classList.add('fab-visible');
+        }, 800); // ← delay 800ms setelah halaman load
+    });
+
     // ── MOVAS AI CHAT ──────────────────────────────────────────
     var aiChatOpen    = false;
     var aiCurrentNopol = '';
@@ -619,64 +739,77 @@
         }
     }
 
-function loadAIHistory() {
-    $.ajax({
-        url     : SITE_URL + 'get_ai_history',
-        type    : 'POST',
-        dataType: 'JSON',
-        data    : {
-            token : MOVAS_TOKEN,
-            nopol : aiCurrentNopol || 'umum',
-        },
-        success: function(res) {
-            if (!res.status) return;
+    // Tutup chat jika klik di luar window
+    document.addEventListener('click', function(e) {
+        var chatWindow = document.getElementById('movas-ai-chat-window');
+        var chatFab    = document.getElementById('movas-ai-fab');
 
-            aiHistoryLoaded = true;
-
-            if (res.history && res.history.length > 0) {
-                var container = document.getElementById('ai-messages');
-                container.innerHTML = '';
-
-                res.history.forEach(function(h) {
-                    var div       = document.createElement('div');
-                    div.className = 'ai-bubble ' + (h.role === 'user' ? 'user' : 'assistant');
-
-                    var formatted = h.message
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                        .replace(/\n/g, '<br>');
-
-                    // ── Langsung tampil tanpa animasi ──
-                    div.innerHTML = '<div class="ai-bubble-content">' + formatted + '</div>';
-                    container.appendChild(div);
-                });
-
-                container.scrollTop = container.scrollHeight;
-            }
-
-            // Update quota
-            var label = document.getElementById('ai-quota-label');
-            if (label) {
-                if (res.is_pro) {
-                    label.textContent = '★ PRO — Unlimited';
-                } else {
-                    label.textContent = res.sisa >= 0 ? 'Sisa: ' + res.sisa + '/5' : '';
-                }
-            }
-
-            // Enable/disable input
-            if (!res.is_pro && res.sisa === 0) {
-                document.getElementById('ai-input').disabled    = true;
-                document.getElementById('ai-send-btn').disabled = true;
-                document.getElementById('ai-input').placeholder = 'Kuota hari ini habis.';
-            } else {
-                document.getElementById('ai-input').disabled    = false;
-                document.getElementById('ai-send-btn').disabled = false;
-                document.getElementById('ai-input').placeholder = 'Ketik pertanyaan...';
-            }
+        if (aiChatOpen &&
+            chatWindow && !chatWindow.contains(e.target) &&
+            chatFab    && !chatFab.contains(e.target)) {
+            toggleAIChat();
         }
     });
-}
+
+    function loadAIHistory() {
+        $.ajax({
+            url     : SITE_URL + 'get_ai_history',
+            type    : 'POST',
+            dataType: 'JSON',
+            data: {
+                token : MOVAS_TOKEN,
+                nopol : '',
+                limit : MOVAS_IS_PRO ? 50 : 10
+            },
+            success: function(res) {
+                if (!res.status) return;
+
+                aiHistoryLoaded = true;
+
+                if (res.history && res.history.length > 0) {
+                    var container = document.getElementById('ai-messages');
+                    container.innerHTML = '';
+
+                    res.history.forEach(function(h) {
+                        var div       = document.createElement('div');
+                        div.className = 'ai-bubble ' + (h.role === 'user' ? 'user' : 'assistant');
+
+                        var formatted = h.message
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                            .replace(/\n/g, '<br>');
+
+                        // ── Langsung tampil tanpa animasi ──
+                        div.innerHTML = '<div class="ai-bubble-content">' + formatted + '</div>';
+                        container.appendChild(div);
+                    });
+
+                    container.scrollTop = container.scrollHeight;
+                }
+
+                // Update quota
+                var label = document.getElementById('ai-quota-label');
+                if (label) {
+                    if (res.is_pro) {
+                        label.textContent = '★ PRO — Unlimited';
+                    } else {
+                        label.textContent = res.sisa >= 0 ? 'Sisa: ' + res.sisa + '/10' : '';
+                    }
+                }
+
+                // Enable/disable input
+                if (!res.is_pro && res.sisa === 0) {
+                    document.getElementById('ai-input').disabled    = true;
+                    document.getElementById('ai-send-btn').disabled = true;
+                    document.getElementById('ai-input').placeholder = 'Kuota hari ini habis.';
+                } else {
+                    document.getElementById('ai-input').disabled    = false;
+                    document.getElementById('ai-send-btn').disabled = false;
+                    document.getElementById('ai-input').placeholder = 'Ketik pertanyaan...';
+                }
+            }
+        });
+    }
 
     function updateAIQuotaLabel() {
         var label = document.getElementById('ai-quota-label');
@@ -768,43 +901,65 @@ function loadAIHistory() {
         document.getElementById('ai-messages').scrollTop =
             document.getElementById('ai-messages').scrollHeight;
 
+        // ── Pesan tunggu setelah 5 detik ──────────────────────
+        var waitingMsgs = [
+            'Sabar ya, lagi banyak permintaan... ⏳',
+            'Bentar ya, lagi nyari jawaban terbaik... 🔍',
+            'Hampir selesai, mohon ditunggu... 🚗',
+        ];
+        var waitingTimer = setTimeout(function() {
+            var typingEl = document.getElementById('ai-typing');
+            if (typingEl && aiIsLoading) {
+                typingEl.innerHTML =
+                    '<div class="ai-bubble assistant" style="margin:0;">'
+                + '<div class="ai-bubble-content" style="padding:10px 14px;'
+                + ' font-size:11px; color:var(--movas-text3);">'
+                + waitingMsgs[Math.floor(Math.random() * waitingMsgs.length)]
+                + '</div></div>';
+            }
+        }, 5000);
+        // ──────────────────────────────────────────────────────
+
         $.ajax({
             url     : SITE_URL + 'ai_chat',
             type    : 'POST',
             dataType: 'JSON',
             data    : {
                 token  : MOVAS_TOKEN,
-                nopol  : aiCurrentNopol || 'umum',
+                nopol  : aiCurrentNopol || '',
                 message: message,
             },
             success: function(res) {
                 aiIsLoading = false;
-                document.getElementById('ai-typing').style.display = 'none';
-                document.getElementById('ai-send-btn').style.opacity = '1';
+
+                // ── PALING ATAS ────────────────────────────────────────
+                clearTimeout(waitingTimer);
+                document.getElementById('ai-typing').style.display      = 'none';
+                document.getElementById('ai-waiting-msg').style.display = 'none';
+                document.getElementById('ai-waiting-text').textContent  = '';
+                document.getElementById('ai-send-btn').style.opacity    = '1';
+                // ──────────────────────────────────────────────────────
 
                 if (res.status) {
                     appendAIBubble('assistant', res.reply);
 
-                    // Update quota
                     var label = document.getElementById('ai-quota-label');
                     if (label) {
                         if (res.is_pro) {
                             label.textContent = '★ PRO — Unlimited';
                         } else if (res.sisa === 0) {
                             label.textContent = 'Kuota habis';
-                            // Disable input
                             document.getElementById('ai-input').disabled    = true;
                             document.getElementById('ai-send-btn').disabled = true;
                             document.getElementById('ai-input').placeholder = 'Kuota hari ini habis.';
                         } else {
-                            label.textContent = 'Sisa: ' + res.sisa + '/5';
+                            label.textContent = 'Sisa: ' + res.sisa + '/10';
                         }
                     }
 
                 } else {
                     appendAIBubble('assistant', '⚠️ ' + res.error);
 
-                    // Jika quota habis — disable input
                     if (res.error.indexOf('Kuota') > -1 || res.error.indexOf('kuota') > -1) {
                         document.getElementById('ai-input').disabled    = true;
                         document.getElementById('ai-send-btn').disabled = true;
@@ -816,8 +971,15 @@ function loadAIHistory() {
             },
             error: function() {
                 aiIsLoading = false;
-                document.getElementById('ai-typing').style.display = 'none';
-                document.getElementById('ai-send-btn').style.opacity = '1';
+
+                // ── PALING ATAS ────────────────────────────────────────
+                clearTimeout(waitingTimer);
+                document.getElementById('ai-typing').style.display      = 'none';
+                document.getElementById('ai-waiting-msg').style.display = 'none';
+                document.getElementById('ai-waiting-text').textContent  = '';
+                document.getElementById('ai-send-btn').style.opacity    = '1';
+                // ──────────────────────────────────────────────────────
+
                 appendAIBubble('assistant', '⚠️ Terjadi kesalahan. Coba lagi.');
             }
         });
@@ -825,8 +987,168 @@ function loadAIHistory() {
 
     // Set nopol konteks saat di halaman detail kendaraan
     <?php if (isset($nopol)): ?>
-    aiCurrentNopol = '<?= addslashes($nopol) ?>';
+    aiHistoryLoaded = false; // ← reset agar history dimuat ulang
+    aiCurrentNopol  = '<?= addslashes($nopol) ?>';
+    <?php else: ?>
+    aiCurrentNopol  = '';
     <?php endif; ?>
+
+    // ── FAB BUBBLE TEXT ────────────────────────────────────────
+    var aiBubbleTexts = [
+        'Halo <?= htmlspecialchars($nama_sapa ?? $customer['customer_name']) ?>! Saya MOVAS AI 👋',
+        'Ada yang bisa MOVAS bantu hari ini?',
+        'Tanya saya soal kendaraanmu 🚗',
+        'Cek kondisi kendaraan yuk!',
+        'Ada komponen perlu dicek? 🔧',
+        'Kapan terakhir servis kendaraanmu?',
+        'Saya siap membantu perawatan mobilmu!',
+    ];
+
+    var aiBubbleIdx     = 0;
+    var aiBubbleTimer   = null;
+    var aiBubbleVisible = false;
+
+    function showAIBubble() {
+        if (aiChatOpen) return;
+        if (aiBubbleIdx >= aiBubbleTexts.length) return;
+
+        var el = document.getElementById('movas-ai-bubble-text');
+        if (!el) return;
+
+        // ── Clear semua timer sebelumnya ──────────────────────
+        if (window._bubbleTypewriter) {
+            clearInterval(window._bubbleTypewriter);
+            window._bubbleTypewriter = null;
+        }
+        if (aiBubbleTimer) {
+            clearTimeout(aiBubbleTimer);
+            aiBubbleTimer = null;
+        }
+
+        el.classList.remove('show');
+        el.textContent = '';
+
+        setTimeout(function() {
+            if (aiChatOpen) return; // ← cek lagi setelah delay
+
+            var text    = aiBubbleTexts[aiBubbleIdx];
+            aiBubbleIdx++;
+
+            el.classList.add('show');
+
+            var i = 0;
+            window._bubbleTypewriter = setInterval(function() {
+                if (document.hidden) {
+                    // ← Stop jika tab tidak aktif
+                    clearInterval(window._bubbleTypewriter);
+                    window._bubbleTypewriter = null;
+                    el.classList.remove('show');
+                    el.textContent = '';
+                    return;
+                }
+
+                if (i < text.length) {
+                    el.textContent += text[i];
+                    i++;
+                } else {
+                    clearInterval(window._bubbleTypewriter);
+                    window._bubbleTypewriter = null;
+
+                    setTimeout(function() {
+                        el.classList.remove('show');
+                        setTimeout(function() {
+                            el.textContent = '';
+                            if (aiBubbleIdx < aiBubbleTexts.length && !aiChatOpen) {
+                                aiBubbleTimer = setTimeout(showAIBubble, 2000);
+                            }
+                        }, 300);
+                    }, 3000);
+                }
+            }, 35);
+        }, 300);
+    }
+
+    // Mulai setelah 2 detik
+    <?php if ($page === 'vehicle_list'): ?>
+        // Mulai bubble hanya di halaman vehicle list
+        setTimeout(function() {
+            showAIBubble();
+        }, 2000);
+    <?php endif; ?>
+
+    // Stop bubble saat chat dibuka
+    var _originalToggle = window.toggleAIChat;
+    window.toggleAIChat = function() {
+        _originalToggle();
+        var el = document.getElementById('movas-ai-bubble-text');
+        if (el) el.classList.remove('show');
+    };
+
+    // ── SWIPE TO HIDE FAB ──────────────────────────────────────
+    (function() {
+        var fab        = document.getElementById('movas-ai-fab');
+        var startX     = 0;
+        var startY     = 0;
+        var isDragging = false;
+
+        if (!fab) return;
+
+        // Touch (mobile)
+        fab.addEventListener('touchstart', function(e) {
+            startX     = e.touches[0].clientX;
+            startY     = e.touches[0].clientY;
+            isDragging = false;
+        }, { passive: true });
+
+        fab.addEventListener('touchmove', function(e) {
+            var diffX = e.touches[0].clientX - startX;
+            var diffY = e.touches[0].clientY - startY;
+
+            // Swipe kanan
+            if (diffX > 10 && Math.abs(diffY) < 30) {
+                isDragging = true;
+            }
+        }, { passive: true });
+
+        fab.addEventListener('touchend', function(e) {
+            var diffX = e.changedTouches[0].clientX - startX;
+            if (isDragging && diffX > 50) {
+                // Sembunyikan FAB
+                fab.classList.add('fab-hidden');
+                var bubble = document.getElementById('movas-ai-bubble-text');
+                if (bubble) bubble.classList.remove('show');
+                clearInterval(aiBubbleTimer);
+            }
+            isDragging = false;
+        });
+
+        // Mouse drag (desktop)
+        var mouseStartX = 0;
+        var isMouseDrag = false;
+
+        fab.addEventListener('mousedown', function(e) {
+            mouseStartX = e.clientX;
+            isMouseDrag = false;
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (mouseStartX === 0) return;
+            if (e.clientX - mouseStartX > 10) {
+                isMouseDrag = true;
+            }
+        });
+
+        document.addEventListener('mouseup', function(e) {
+            if (isMouseDrag && (e.clientX - mouseStartX) > 50) {
+                fab.classList.add('fab-hidden');
+                var bubble = document.getElementById('movas-ai-bubble-text');
+                if (bubble) bubble.classList.remove('show');
+                clearInterval(aiBubbleTimer);
+            }
+            mouseStartX = 0;
+            isMouseDrag = false;
+        });
+    })();
 </script>
 
 <?php $this->load->view('movas/scripts'); ?>

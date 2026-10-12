@@ -17,12 +17,8 @@ class Movas extends CI_Controller
     private function _auth($token)
     {
         $customer = $this->M_movas->get_customer_by_token($token);
-
         if (empty($customer)) {
-            $this->_show_error(
-                'Akses Tidak Valid',
-                'Link MOVAS tidak ditemukan atau sudah tidak aktif.'
-            );
+            $this->_show_error('Akses Tidak Valid', '...');
             return false;
         }
 
@@ -30,11 +26,28 @@ class Movas extends CI_Controller
         $this->customer_id = $customer['id'];
         $this->is_pro      = (bool) $customer['movas_is_pro'];
 
-        // ── Hapus teks dalam kurung dari customer_name ────────
+        // Hapus teks dalam kurung
         $this->customer['customer_name'] = trim(
             preg_replace('/\(.*?\)/', '', $customer['customer_name'])
         );
 
+        // ── Tentukan nama sapa ─────────────────────────────────
+        $nama_sapa = $this->customer['customer_name'];
+        if (strtolower($customer['type_customer']) === 'perusahaan') {
+            $invoice_pic = $this->db->select('pic')
+                ->where('customer_id', $customer['id'])
+                ->where('app_status', 'approved')
+                ->where('is_active', 1)
+                ->order_by('created_at', 'DESC')
+                ->limit(1)
+                ->get('mac_invoice')->row_array();
+
+            if (!empty($invoice_pic['pic'])) {
+                $nama_sapa = trim(preg_replace('/\(.*?\)/', '', $invoice_pic['pic']));
+            }
+        }
+
+        $this->customer['nama_sapa'] = $nama_sapa;
         return true;
     }
 
@@ -106,6 +119,13 @@ class Movas extends CI_Controller
         $data['customer']       = $this->customer;
         $data['is_pro']         = $this->is_pro;
         $data['token']          = $token;
+        foreach ($kendaraan_list as &$k) {
+            $reminder = $this->M_movas->get_reminder_kendaraan(
+                $this->customer_id, $k['nopol']
+            );
+            $k['reminder'] = $reminder;
+        }
+
         $data['kendaraan_list'] = $kendaraan_list;
         $data['nama_sapa']      = $nama_sapa;
         $data['salam']          = $salam;
@@ -168,6 +188,11 @@ class Movas extends CI_Controller
 
         $data['foto_sesi'] = $foto_sesi;
 
+        $reminder_kendaraan = $this->M_movas->get_reminder_kendaraan(
+            $this->customer_id, $nopol
+        );
+        $data['reminder_kendaraan'] = $reminder_kendaraan;
+
         $data['customer']     = $this->customer;
         $data['is_pro']       = $this->is_pro;
         $data['token']        = $token;
@@ -178,6 +203,7 @@ class Movas extends CI_Controller
         $data['kondisi']      = $kondisi;
         $data['rekomendasi']  = $rekomendasi;
         $data['riwayat']      = $riwayat;
+        $data['nama_sapa'] = $this->customer['nama_sapa'];
         $data['page']         = 'kendaraan_detail';
 
         $this->load->view('movas/layout', $data);
@@ -190,11 +216,19 @@ class Movas extends CI_Controller
 
         $profile = $this->M_movas->get_profile($this->customer_id, $this->is_pro);
 
-        $data['customer'] = $this->customer;
-        $data['is_pro']   = $this->is_pro;
-        $data['token']    = $token;
-        $data['profile']  = $profile;
-        $data['page']     = 'kendaraan_list';
+        // ── Tambah reminder per kendaraan ─────────────────────
+        foreach ($profile['kendaraan'] as &$k) {
+            $k['reminder'] = $this->M_movas->get_reminder_kendaraan(
+                $this->customer_id, $k['nopol']
+            );
+        }
+
+        $data['customer']  = $this->customer;
+        $data['is_pro']    = $this->is_pro;
+        $data['token']     = $token;
+        $data['profile']   = $profile;
+        $data['nama_sapa'] = $this->customer['nama_sapa'];
+        $data['page']      = 'kendaraan_list';
 
         $this->load->view('movas/layout', $data);
     }
@@ -261,6 +295,7 @@ class Movas extends CI_Controller
         $data['is_pro']   = $this->is_pro;
         $data['token']    = $token;
         $data['profile']  = $profile;
+        $data['nama_sapa'] = $this->customer['nama_sapa'];
         $data['page']     = 'profile';
 
         $this->load->view('movas/layout', $data);
@@ -434,8 +469,9 @@ class Movas extends CI_Controller
         $konteks = $this->M_movas->get_konteks_ai($this->customer_id);
 
         // Ambil history chat (10 terakhir, dibalik agar urutan benar)
-        $history_raw = $this->M_movas->get_ai_chat($this->customer_id, $nopol, 10);
-        $history     = array_reverse($history_raw);
+        $limit       = $this->is_pro ? 50 : 10;
+        $history_raw = $this->M_movas->get_ai_chat($this->customer_id, $nopol, $limit);
+        $history     = $history_raw;
 
         // Build system prompt
         $nama_customer = $this->customer['customer_name'];
@@ -455,15 +491,61 @@ class Movas extends CI_Controller
             if (!empty($k['rekomendasi'])) {
                 $system_prompt .= "  Rekomendasi: " . implode(', ', array_slice($k['rekomendasi'], 0, 3)) . "\n";
             }
+
+            // ── Tambah reminder ────────────────────────────────────
+            if (!empty($k['reminder'])) {
+                $sisa = $k['reminder']['sisa_hari'];
+                $system_prompt .= "  Reminder service berkala: "
+                    . date('d/m/Y', strtotime($k['reminder']['tgl_reminder']))
+                    . " ({$sisa} hari lagi)\n";
+            }
+
+            if (!empty($k['riwayat_invoice'])) {
+                $system_prompt .= "  Riwayat service terakhir:\n";
+                foreach ($k['riwayat_invoice'] as $inv) {
+                    $system_prompt .= "  * {$inv['tgl_service']} | {$inv['km']} | {$inv['jenis_service']} | Total: {$inv['sub_total']}\n";
+                    if (!empty($inv['uraian'])) {
+                        $system_prompt .= "    Uraian: " . implode('; ', array_slice($inv['uraian'], 0, 5)) . "\n";
+                    }
+                }
+            }
         }
 
-        $system_prompt .= "\nATURAN:\n";
+        $system_prompt .= "\nINFORMASI MOBILE AUTO CARE (MAC):\n";
+        $system_prompt .= "- Nama: Mobile Auto Care (MAC)\n";
+        $system_prompt .= "- WA Pusat: 0823 2400 1500\n";
+        $system_prompt .= "- Jam Operasional: Senin-Jumat 08:00-16:00, Sabtu 08:00-14:00\n";
+        $system_prompt .= "- Layanan: Service kendaraan, perawatan rutin, perbaikan komponen\n";
+        $system_prompt .= "- HOME SERVICE: MAC melayani home service, mekanik datang ke lokasi customer\n\n";
+
+        $system_prompt .= "LOKASI CABANG MAC:\n";
+        $system_prompt .= "- MAC Jabodetabek: Kp. Empu No.1 RT.001/RW.007, Setu Sari, Cileungsi, Kab. Bogor | PIC: Sopandi 081213325396\n";
+        $system_prompt .= "- MAC Bandung: Jl. Kol. Ahmad Syam No.235 RT04/06, Sayang, Jatinangor | PIC: Priyadi 082324007900\n";
+        $system_prompt .= "- MAC Yogyakarta: Jl. Prambanan Manisrenggo Km2, Dengok, Bogisan Prambanan Klaten | PIC: Anggoro 089528305506\n";
+        $system_prompt .= "- MAC Gresik: Jl. Beton 1 No.18 Perum Pongangan Indah, Gresik | PIC: Aang 081331200036\n";
+        $system_prompt .= "- MAC Kediri: Jl. Cibaling RT003/RW01 Darungan, Pare, Kab. Kediri | PIC: Saryanto 081329542062\n";
+        $system_prompt .= "- MAC Serang: Komp. Pasir Indah Block C No.77, Kaligandu, Kota Serang | PIC: Fatkhur 0895347999347\n";
+        $system_prompt .= "- MAC Lampung: Jl. Pulau Damar, Way Dadi Baru, Sukarame, Bandar Lampung | PIC: Agung 087779296081\n";
+        $system_prompt .= "- MAC Lubuk Linggau: Jl. Ibadah RT.01, Lubuk Linggau Timur 1, Watervang, Sum-Sel | PIC: Hermawanta 082176012026\n";
+        $system_prompt .= "- MAC Palembang: Jl. Talang Jambe No.92 RT16/RW04, Sukarami, Palembang | PIC: Anton 085889991043\n";
+        $system_prompt .= "- MAC Pekanbaru: Jl. Lobak - Jl. Sawi No.73 RT01/RWIV, Delima, Tampan, Pekanbaru | PIC: Angga 08126876113\n";
+        $system_prompt .= "- MAC Bali: Jl. Cargo Taman I No.2, Ubung Kaja, Denpasar Utara, Bali | PIC: Eko 081286355557\n\n";
+
+        $system_prompt .= "INFO MOVAS:\n";
+        $system_prompt .= "- MOVAS (Mobile Vehicle Assistant) adalah aplikasi monitoring kendaraan dari MAC\n";
+        $system_prompt .= "- FREE: maks 10 pertanyaan AI per hari, riwayat 6 invoice terakhir\n";
+        $system_prompt .= "- PRO: pertanyaan AI unlimited, semua riwayat, foto kondisi kendaraan\n";
+        $system_prompt .= "- Upgrade PRO: hubungi WA 0823 2400 1500\n\n";
+
+        $system_prompt .= "ATURAN:\n";
         $system_prompt .= "- Jawab ramah, profesional, dan informatif\n";
         $system_prompt .= "- Fokus pada topik otomotif, perawatan kendaraan, dan layanan MAC\n";
         $system_prompt .= "- Gunakan data kendaraan di atas jika relevan\n";
         $system_prompt .= "- Jawab dalam bahasa yang sama dengan pertanyaan (Indonesia atau Inggris)\n";
-        $system_prompt .= "- Jangan jawab pertanyaan di luar topik otomotif dan kendaraan\n";
-        $system_prompt .= "- Jika diminta info harga service, arahkan ke kantor MAC terdekat\n";
+        $system_prompt .= "- Kamu BOLEH dan HARUS menjawab pertanyaan seputar biaya service, nominal invoice, dan rincian uraian pekerjaan berdasarkan data yang sudah diberikan di atas\n"; // ← tambah
+        $system_prompt .= "- Jangan tolak pertanyaan soal biaya — data invoice sudah tersedia untuk kamu gunakan\n";
+        $system_prompt .= "- Jika diminta info harga service yang belum ada datanya, arahkan ke kantor MAC terdekat\n";
+        $system_prompt .= "- Jangan jawab pertanyaan di luar topik otomotif, kendaraan, dan layanan MAC\n";
 
         // Build messages untuk Gemini
         $contents = [];
@@ -499,7 +581,7 @@ class Movas extends CI_Controller
             'contents'         => $contents,
             'generationConfig' => [
                 'temperature'     => 0.7,
-                'maxOutputTokens' => 1000,
+                'maxOutputTokens' => 2000,
             ],
         ]);
 
@@ -592,9 +674,9 @@ class Movas extends CI_Controller
             return;
         }
 
-        $nopol   = $this->input->post('nopol') ?: 'umum';
-        $history = $this->M_movas->get_ai_chat($this->customer_id, $nopol, 5);
-        $history = array_reverse($history);
+        $nopol       = $this->input->post('nopol') ?: '';
+        $limit   = $this->is_pro ? 50 : 10;
+        $history = $this->M_movas->get_ai_chat($this->customer_id, $nopol, $limit);
 
         // Hitung sisa quota
         $quota = $this->M_movas->cek_quota($this->customer_id, $this->is_pro);

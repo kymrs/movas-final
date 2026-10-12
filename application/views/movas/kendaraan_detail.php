@@ -439,8 +439,79 @@ function renderFotoGallery($fotos) {
     </div>
 </div>
 
-<!-- ── SECTION FOTO KONDISI (PRO ONLY) ──────────────────── -->
-<?php if ($is_pro): ?>
+<?php if (!empty($reminder_kendaraan)):
+    $r     = $reminder_kendaraan;
+    $sisa  = intval($r['sisa_hari']);
+    $bulan = ['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April',
+              '05'=>'Mei','06'=>'Juni','07'=>'Juli','08'=>'Agustus',
+              '09'=>'September','10'=>'Oktober','11'=>'November','12'=>'Desember'];
+    $tgl_fmt = date('d', strtotime($r['tgl_reminder'])) . ' '
+             . $bulan[date('m', strtotime($r['tgl_reminder']))] . ' '
+             . date('Y', strtotime($r['tgl_reminder']));
+
+    $color = $sisa <= 7 ? 'var(--movas-danger)' : ($sisa <= 14 ? 'var(--movas-warn)' : 'var(--movas-cyan)');
+    $color_bg = $sisa <= 7 ? 'rgba(231,74,59,0.08)' : ($sisa <= 14 ? 'rgba(246,194,62,0.08)' : 'rgba(0,180,216,0.07)');
+
+    // Nomor WA cabang
+    $wa_cabang = preg_replace('/[^0-9]/', '', $r['cabang_telp'] ?? '');
+    if (substr($wa_cabang, 0, 1) === '0') {
+        $wa_cabang = '62' . substr($wa_cabang, 1);
+    }
+    $nama_cabang = str_replace('MAC ', '', $r['nama_cabang'] ?? 'MAC');
+?>
+<div class="movas-card mb-4" style="border-left:3px solid <?= $color ?>;">
+    <div class="movas-card-body">
+        <div style="display:flex; align-items:center;
+                    justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:40px; height:40px; border-radius:10px;
+                            background:<?= $color_bg ?>; display:flex;
+                            align-items:center; justify-content:center;
+                            flex-shrink:0;">
+                    <i class="fas fa-bell" style="color:<?= $color ?>; font-size:16px;"></i>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:var(--movas-text3);
+                                text-transform:uppercase; letter-spacing:0.5px;
+                                margin-bottom:2px;">
+                        Reminder Service Berikutnya
+                    </div>
+                    <div style="font-size:14px; font-weight:700; color:var(--movas-text);">
+                        <?= $tgl_fmt ?>
+                    </div>
+                    <div style="font-size:12px; color:<?= $color ?>; margin-top:2px;">
+                        <?= $sisa ?> hari menuju jadwal service
+                    </div>
+                </div>
+            </div>
+
+            <?php if (!empty($wa_cabang)): ?>
+            <!-- <?php 
+            $wa_text = 'Halo%2C%20saya%20ingin%20melakukan%20booking%20service%20berkala%20untuk%20kendaraan%20saya%20dengan%20nomor%20polisi%20*'
+                . urlencode($nopol)
+                . '*.%20Jadwal%20reminder%20service%20saya%20adalah%20*'
+                . urlencode($tgl_fmt)
+                . '*.%20Mohon%20bantuannya%2C%20terima%20kasih.'; 
+                ?> -->
+
+            <!-- <a href="https://wa.me/<?= $wa_cabang ?>?text=<?= $wa_text ?>"
+               target="_blank"
+               style="display:inline-flex; align-items:center; gap:6px;
+                      background:linear-gradient(135deg, #25d366, #128c7e);
+                      color:#fff; text-decoration:none;
+                      padding:8px 14px; border-radius:10px;
+                      font-size:12px; font-weight:600;
+                      white-space:nowrap; flex-shrink:0;">
+                <i class="fab fa-whatsapp" style="font-size:16px;"></i>
+                Booking Service
+            </a> -->
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- ── SECTION FOTO KONDISI ─────────────────────────────── -->
 <div class="movas-card mb-4" id="foto-gallery-card">
     <div class="movas-card-header">
         <span>
@@ -450,22 +521,49 @@ function renderFotoGallery($fotos) {
                         color:#f6c23e; padding:2px 7px; border-radius:10px;
                         margin-left:6px; font-weight:700;">PRO</span>
         </span>
+        <?php if ($is_pro): ?>
         <span id="foto-count-label" style="font-size:11px; color:var(--movas-text3);">
             <?= count($foto_sesi) ?> foto
         </span>
+        <?php endif; ?>
     </div>
     <div class="movas-card-body" id="foto-gallery-wrapper">
-        <?php if (empty($foto_sesi)): ?>
-        <div id="foto-empty" style="text-align:center; padding:20px; color:var(--movas-text3);">
-            <i class="fas fa-camera" style="font-size:28px; opacity:0.3; display:block; margin-bottom:8px;"></i>
-            Belum ada foto kondisi untuk service ini.
-        </div>
+        <?php if ($is_pro): ?>
+            <?php if (empty($foto_sesi)): ?>
+            <div style="text-align:center; padding:20px; color:var(--movas-text3);">
+                <i class="fas fa-camera" style="font-size:28px; opacity:0.3; display:block; margin-bottom:8px;"></i>
+                Belum ada foto kondisi untuk service ini.
+            </div>
+            <?php else: ?>
+            <?php echo renderFotoGallery($foto_sesi); ?>
+            <?php endif; ?>
         <?php else: ?>
-        <?php echo renderFotoGallery($foto_sesi); ?>
+            <!-- Tampilan untuk FREE -->
+            <div style="text-align:center; padding:24px 16px;">
+                <i class="fas fa-lock" style="font-size:32px; color:var(--movas-text3);
+                   opacity:0.4; display:block; margin-bottom:12px;"></i>
+                <div style="font-size:13px; font-weight:600; color:var(--movas-text);
+                            margin-bottom:6px;">
+                    Foto Kondisi Kendaraan
+                </div>
+                <div style="font-size:12px; color:var(--movas-text2); margin-bottom:16px; line-height:1.6;">
+                    Upgrade ke <strong style="color:#f6c23e;">PRO</strong> untuk melihat
+                    foto kondisi komponen kendaraan dari setiap service.
+                </div>
+                <a href="https://wa.me/6282324001500?text=Halo%20MAC%2C%20saya%20ingin%20upgrade%20MOVAS%20ke%20PRO"
+                   target="_blank"
+                   style="display:inline-flex; align-items:center; gap:6px;
+                          background:linear-gradient(135deg, #f6c23e, #e0a800);
+                          color:#000; text-decoration:none;
+                          padding:8px 18px; border-radius:10px;
+                          font-size:12px; font-weight:700;">
+                    <i class="fab fa-whatsapp" style="font-size:16px; color:#25d366;"></i>
+                    Upgrade ke PRO
+                </a>
+            </div>
         <?php endif; ?>
     </div>
 </div>
-<?php endif; ?>
 
 <!-- SECTION 2: REKOMENDASI -->
 <?php if (!empty($rekomendasi)): ?>

@@ -24,22 +24,26 @@ class M_movas extends CI_Model
     // ── LIST KENDARAAN PER CUSTOMER ────────────────────────────
     public function get_kendaraan_list($customer_id, $is_pro)
     {
-        // Jika FREE, ambil 6 invoice terbaru dulu via query terpisah
         $where_id = '';
         if (!$is_pro) {
-            $invoice_ids = $this->db->select('id')
+            // Ambil 6 nopol unik terbaru
+            $nopol_list = $this->db->select('nopol, MAX(awal_service) AS terakhir', FALSE)
                 ->from('mac_invoice')
                 ->where('customer_id', $customer_id)
                 ->where('app_status', 'approved')
                 ->where('is_active', 1)
-                ->order_by('awal_service', 'DESC')
+                ->group_by('nopol')
+                ->order_by('terakhir', 'DESC')
                 ->limit(6)
                 ->get()->result_array();
 
-            if (empty($invoice_ids)) return [];
+            if (empty($nopol_list)) return [];
 
-            $ids = array_column($invoice_ids, 'id');
-            $where_id = 'AND i.id IN (' . implode(',', $ids) . ')';
+            $nopols = array_map(function($n) {
+                return "'" . $this->db->escape_str($n['nopol']) . "'";
+            }, $nopol_list);
+
+            $where_id = 'AND i.nopol IN (' . implode(',', $nopols) . ')';
         }
 
         $sql = "SELECT
@@ -71,7 +75,7 @@ class M_movas extends CI_Model
 
             $k['has_kondisi']    = !empty($sesi);
             $k['sesi_id']        = $sesi['id'] ?? null;
-            $k['tahun']          = $sesi['tahun'] ?? null; // ← tambah
+            $k['tahun']          = $sesi['tahun'] ?? null;
             $k['status_kondisi'] = $sesi
                 ? $this->_hitung_status_kondisi($sesi['id'])
                 : 'belum_ada';
@@ -414,28 +418,48 @@ class M_movas extends CI_Model
     // ── PROFILE ────────────────────────────────────────────────
     public function get_profile($customer_id, $is_pro)
     {
-        // Semua kendaraan
-        $q = $this->db->select('
-                i.nopol,
-                i.tipe,
-                i.jenis_kendaraan,
-                COUNT(i.id)          AS total_service,
-                MAX(i.awal_service)  AS terakhir_service
-            ', FALSE)
-            ->from('mac_invoice i')
-            ->where('i.customer_id', $customer_id)
-            ->where('i.app_status', 'approved')
-            ->where('i.is_active', 1)
-            ->group_by('i.nopol')
-            ->order_by('terakhir_service', 'DESC');
+        // ── Limit 6 nopol unik untuk FREE ─────────────────────
+        $where_nopol = '';
+        if (!$is_pro) {
+            $nopol_list = $this->db->select('nopol, MAX(awal_service) AS terakhir', FALSE)
+                ->from('mac_invoice')
+                ->where('customer_id', $customer_id)
+                ->where('app_status', 'approved')
+                ->where('is_active', 1)
+                ->group_by('nopol')
+                ->order_by('terakhir', 'DESC')
+                ->limit(6)
+                ->get()->result_array();
 
-        $kendaraan = $q->get()->result_array();
+            if (!empty($nopol_list)) {
+                $nopols      = array_map(function($n) {
+                    return "'" . $this->db->escape_str($n['nopol']) . "'";
+                }, $nopol_list);
+                $where_nopol = 'AND i.nopol IN (' . implode(',', $nopols) . ')';
+            }
+        }
 
-        $total_service   = array_sum(array_column($kendaraan, 'total_service'));
-        $total_kendaraan = count($kendaraan);
+        // ── Query utama pakai raw SQL ──────────────────────────
+        $sql = "SELECT
+                    i.nopol,
+                    i.tipe,
+                    i.jenis_kendaraan,
+                    COUNT(i.id)         AS total_service,
+                    MAX(i.awal_service) AS terakhir_service
+                FROM mac_invoice i
+                WHERE i.customer_id = " . intval($customer_id) . "
+                AND i.app_status = 'approved'
+                AND i.is_active = 1
+                {$where_nopol}
+                GROUP BY i.nopol
+                ORDER BY terakhir_service DESC";
+
+        $kendaraan = $this->db->query($sql)->result_array();
+
+        $total_service    = array_sum(array_column($kendaraan, 'total_service'));
+        $total_kendaraan  = count($kendaraan);
         $terakhir_service = !empty($kendaraan) ? $kendaraan[0]['terakhir_service'] : null;
 
-        // Cek has_kondisi per kendaraan
         foreach ($kendaraan as &$k) {
             $sesi = $this->db->select('s.id')
                 ->from('mac_movas_sesi s')
@@ -448,10 +472,10 @@ class M_movas extends CI_Model
         }
 
         return [
-            'kendaraan'       => $kendaraan,
-            'total_kendaraan' => $total_kendaraan,
-            'total_service'   => $total_service,
-            'terakhir_service'=> $terakhir_service,
+            'kendaraan'        => $kendaraan,
+            'total_kendaraan'  => $total_kendaraan,
+            'total_service'    => $total_service,
+            'terakhir_service' => $terakhir_service,
         ];
     }
 
@@ -498,15 +522,50 @@ class M_movas extends CI_Model
         return $fotos;
     }
 
+    // ── GET REMINDER PER NOPOL ─────────────────────────────────
+    public function get_reminder_kendaraan($customer_id, $nopol)
+    {
+        $reminder = $this->db->select('
+                r.tgl_reminder, r.durasi_bulan,
+                cab.no_telp AS cabang_telp,
+                cab.nama_cabang,
+                DATEDIFF(r.tgl_reminder, CURDATE()) AS sisa_hari
+            ', FALSE)
+            ->from('mac_reminder_service r')
+            ->join('mac_invoice i',  'i.id = r.invoice_id', 'left')
+            ->join('mac_cabang cab', 'cab.id = r.cabang_id', 'left')
+            ->where('r.customer_id', $customer_id)
+            ->where('r.nopol', $nopol)
+            ->order_by('r.tgl_reminder', 'DESC')
+            ->limit(1)
+            ->get()->row_array();
+
+        if (empty($reminder)) return null;
+
+        // Hanya tampil jika <= 30 hari
+        $sisa = intval($reminder['sisa_hari']);
+        if ($sisa > 30) return null;
+
+        return $reminder;
+    }
+
     // MOVAS AI CHAT
     // ── GET HISTORY CHAT PER KENDARAAN ────────────────────────
-    public function get_ai_chat($customer_id, $nopol, $limit = 10)
+    public function get_ai_chat($customer_id, $nopol = null, $limit = 10)
     {
-        return $this->db->where('customer_id', $customer_id)
-            ->where('nopol', $nopol)
-            ->order_by('created_at', 'DESC')
-            ->limit($limit)
-            ->get('mac_movas_ai_chat')->result_array();
+        $q = $this->db->where('customer_id', $customer_id);
+
+        if ($nopol && $nopol !== 'umum') {
+            $q->where('nopol', $nopol);
+        }
+
+        // Ambil terbaru dulu (DESC), lalu balik di PHP
+        $rows = $q->order_by('id', 'DESC')
+                ->limit($limit)
+                ->get('mac_movas_ai_chat')->result_array();
+
+        // Balik agar urutan tampil dari lama ke baru
+        return array_reverse($rows);
     }
 
     // ── SIMPAN CHAT ────────────────────────────────────────────
@@ -514,7 +573,7 @@ class M_movas extends CI_Model
     {
         $this->db->insert('mac_movas_ai_chat', [
             'customer_id' => $customer_id,
-            'nopol'       => $nopol,
+            'nopol'       => $nopol ?: '',
             'role'        => $role,
             'message'     => $message,
             'created_at'  => date('Y-m-d H:i:s'),
@@ -534,7 +593,7 @@ class M_movas extends CI_Model
             ->get('mac_movas_ai_quota')->row_array();
 
         $jumlah = $quota['jumlah_tanya'] ?? 0;
-        $limit  = 5; // FREE = 5x per hari
+        $limit  = 10; // FREE = 10x per hari
 
         if ($jumlah >= $limit) {
             return ['allowed' => false, 'sisa' => 0];
@@ -583,7 +642,7 @@ class M_movas extends CI_Model
             ->order_by('terakhir_service', 'DESC')
             ->get()->result_array();
 
-        $konteks = [];
+            $konteks = [];
 
         foreach ($kendaraan_list as $k) {
             $item = [
@@ -595,9 +654,42 @@ class M_movas extends CI_Model
                 'total_service'    => $k['total_service'],
                 'kondisi'          => [],
                 'rekomendasi'      => [],
+                'riwayat_invoice'  => [],
             ];
-
-            // Ambil sesi terbaru
+            // ── Ambil riwayat invoice + detail ────────────────────
+            $invoices = $this->db->select('
+                    i.id, i.invoice_number, i.awal_service,
+                    i.km, i.sub_total, i.jenis_service
+                ', FALSE)
+                ->from('mac_invoice i')
+                ->where('i.customer_id', $customer_id)
+                ->where('i.nopol', $k['nopol'])
+                ->where('i.app_status', 'approved')
+                ->where('i.is_active', 1)
+                ->order_by('i.awal_service', 'DESC')
+                ->limit(5)
+                ->get()->result_array();
+            foreach ($invoices as $inv) {
+                $details = $this->db->select('item, tipe_item, qty, biaya, total')
+                    ->where('invoice_id', $inv['id'])
+                    ->where('is_active', 1)
+                    ->get('mac_invoice_detail')->result_array();
+                $uraian = [];
+                foreach ($details as $d) {
+                    $uraian[] = $d['item'] . ' (' . $d['tipe_item'] . ')'
+                            . ' x' . $d['qty']
+                            . ' = Rp ' . number_format($d['total'], 0, ',', '.');
+                }
+                $item['riwayat_invoice'][] = [
+                    'invoice_number' => $inv['invoice_number'],
+                    'tgl_service'    => date('d/m/Y', strtotime($inv['awal_service'])),
+                    'km'             => number_format($inv['km'], 0, ',', '.') . ' KM',
+                    'jenis_service'  => $inv['jenis_service'],
+                    'sub_total'      => 'Rp ' . number_format($inv['sub_total'], 0, ',', '.'),
+                    'uraian'         => $uraian,
+                ];
+            }
+            // ── Ambil kondisi dan rekomendasi ──────────────────────
             $sesi = $this->db->select('s.id')
                 ->from('mac_movas_sesi s')
                 ->join('mac_invoice i', 'i.id = s.invoice_id')
@@ -606,16 +698,12 @@ class M_movas extends CI_Model
                 ->order_by('s.tgl_service', 'DESC')
                 ->limit(1)
                 ->get()->row_array();
-
             if ($sesi) {
                 $kondisi_all = $this->get_kondisi_by_sesi($sesi['id']);
                 $rekomendasi = $this->get_rekomendasi($customer_id, $k['nopol']);
-
-                // Rangkum kondisi yang tidak baik saja
                 $kondisi_negatif = [];
-                $skip = ['id','sesi_id','created_at','updated_at','accu_tegangan','accu_merk'];
+                $skip    = ['id','sesi_id','created_at','updated_at','accu_tegangan','accu_merk'];
                 $positif = ['Baik','Bersih','Ada','Cukup','Hidup','Berfungsi','Dingin','Selesai'];
-
                 foreach ($kondisi_all as $tabel => $data) {
                     if ($tabel === 'ban' || !is_array($data)) continue;
                     foreach ($data as $key => $val) {
@@ -625,21 +713,30 @@ class M_movas extends CI_Model
                         }
                     }
                 }
-
-                // Ban
                 foreach ($kondisi_all['ban'] ?? [] as $ban) {
                     if (!empty($ban['status']) && $ban['status'] !== 'Baik') {
                         $kondisi_negatif[] = 'Ban ' . $ban['posisi'] . ': ' . $ban['status'];
                     }
                 }
-
                 $item['kondisi']     = $kondisi_negatif;
                 $item['rekomendasi'] = array_map(fn($r) => $r['label'] . ' (' . $r['kondisi'] . ')', $rekomendasi);
             }
 
+            // ── Tambah reminder ────────────────────────────────────────
+            $reminder = $this->get_reminder_kendaraan($customer_id, $k['nopol']);
+            if ($reminder) {
+                $item['reminder'] = [
+                    'tgl_reminder' => $reminder['tgl_reminder'],
+                    'sisa_hari'    => intval($reminder['sisa_hari']),
+                ];
+            } else {
+                $item['reminder'] = null;
+            }
+
+            // ── Simpan ke konteks ──────────────────────────────────
             $konteks[] = $item;
         }
-
         return $konteks;
     }
+
 }

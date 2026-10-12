@@ -4,7 +4,7 @@ class Welcome extends CI_Controller
 {
     public function index()
     {
-        $this->load->view('movas/error');
+        $this->load->view('movas/welcome');
     
     }
 }

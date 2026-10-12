@@ -1045,3 +1045,191 @@ html, body {
         max-height: 60vh !important;
     }
 }
+
+/* ── FAB ANIMATION ──────────────────────────────────────── */
+#movas-ai-fab {
+    animation: fabPulse 3s ease-in-out infinite;
+}
+
+@keyframes fabPulse {
+    0%, 100% { box-shadow: 0 4px 16px rgba(0,180,216,0.4); }
+    50%       { box-shadow: 0 4px 24px rgba(0,180,216,0.7),
+                            0 0 0 8px rgba(0,180,216,0.1); }
+}
+
+/* Bubble teks */
+#movas-ai-bubble-text {
+    position: fixed;
+    right: 76px;
+    bottom: calc(var(--bottom-nav-h) + 26px); /* ← sesuai posisi FAB */
+    background: var(--movas-surface);
+    border: 1px solid var(--movas-border);
+    border-radius: 12px 12px 4px 12px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--movas-text);
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateX(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    z-index: 499;
+}
+
+@media (min-width: 769px) {
+    #movas-ai-bubble-text {
+        bottom: 38px; /* ← desktop tidak ada bottom nav */
+    }
+}
+
+#movas-ai-bubble-text.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+#movas-ai-bubble-text::after {
+    content: '';
+    position: absolute;
+    right: -6px; top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-left-color: var(--movas-surface);
+}
+
+/* ── FAB AI ─────────────────────────────────────────────── */
+#movas-ai-fab {
+    position: fixed;
+    bottom: calc(var(--bottom-nav-h) + 16px);
+    right: 16px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a2d7c, #00b4d8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 500;
+    opacity: 0;
+    transform: translateX(80px);
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.5s ease,
+                box-shadow 0.3s ease;
+    animation: fabPulse 3s ease-in-out infinite;
+}
+
+#movas-ai-fab.fab-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+#movas-ai-fab.fab-hidden {
+    opacity: 0 !important;
+    transform: translateX(80px) !important;
+    pointer-events: none;
+}
+
+@keyframes fabPulse {
+    0%, 100% { box-shadow: 0 4px 16px rgba(0,180,216,0.4); }
+    50%       { box-shadow: 0 4px 24px rgba(0,180,216,0.7),
+                            0 0 0 8px rgba(0,180,216,0.1); }
+}
+
+/* ── TOMBOL X ────────────────────────────────────────────── */
+#movas-ai-close-fab {
+    position: fixed;
+    bottom: calc(var(--bottom-nav-h) + 54px);
+    right: 10px;
+    width: 17px;
+    height: 17px;
+    bottom: 130px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 501;
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+    line-height: 1;
+    opacity: 0;
+    transform: translateX(80px);
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.5s ease,
+                background 0.15s ease;
+}
+
+#movas-ai-fab img {
+    animation: robotBob 3s ease-in-out infinite;
+}
+
+@keyframes robotBob {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-4px); }
+}
+
+#movas-ai-close-fab.fab-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+#movas-ai-close-fab:hover {
+    background: rgba(231,74,59,0.8);
+    color: #fff;
+}
+
+/* ── BUBBLE TEKS ─────────────────────────────────────────── */
+#movas-ai-bubble-text {
+    position: fixed;
+    right: 76px;
+    bottom: calc(var(--bottom-nav-h) + 26px);
+    background: var(--movas-surface);
+    border: 1px solid var(--movas-border);
+    border-radius: 12px 12px 4px 12px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--movas-text);
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateX(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    z-index: 499;
+}
+
+#movas-ai-bubble-text.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+#movas-ai-bubble-text::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-left-color: var(--movas-surface);
+}
+
+/* ── DESKTOP ─────────────────────────────────────────────── */
+@media (min-width: 769px) {
+    #movas-ai-fab {
+        bottom: 24px;
+        right: 24px;
+    }
+
+    #movas-ai-close-fab {
+        bottom: 70px;
+        right: 10px;
+    }
+
+    #movas-ai-bubble-text {
+        bottom: 38px;
+        right: 86px;
+    }
+}
