@@ -24,7 +24,7 @@ function renderFotoGallery($fotos) {
 
     $label_map = [
         'tali_kipas'=>'Tali Kipas','oli_mesin'=>'Oli Mesin',
-        'filter_oli'=>'Filter Oli','slang_radiator'=>'Slang Radiator',
+        'filter_oli'=>'Filter Oli','selang_radiator'=>'Selang Radiator',
         'air_radiator'=>'Air Radiator','tune_up'=>'Tune Up',
         'busi'=>'Busi','baterai_mesin'=>'Baterai',
         'filter_udara'=>'Filter Udara','filter_bbm'=>'Filter BBM',
@@ -310,7 +310,7 @@ function renderFotoGallery($fotos) {
 
         $label_map = [
             'tali_kipas'=>'Tali Kipas','oli_mesin'=>'Oli Mesin','filter_oli'=>'Filter Oli',
-            'slang_radiator'=>'Slang Radiator','air_radiator'=>'Air Radiator','tune_up'=>'Tune Up',
+            'selang_radiator'=>'Selang Radiator','air_radiator'=>'Air Radiator','tune_up'=>'Tune Up',
             'busi'=>'Busi','baterai_mesin'=>'Baterai','filter_udara'=>'Filter Udara','filter_bbm'=>'Filter BBM',
             'oli_transmisi'=>'Oli Transmisi','oli_differential'=>'Oli Differential','kabel_kopling'=>'Kabel Kopling',
             'master_kopling'=>'Master Kopling','sistem_rem'=>'Sistem Rem','master_rem'=>'Master Rem',

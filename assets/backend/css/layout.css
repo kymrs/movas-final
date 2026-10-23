@@ -617,7 +617,7 @@ html, body {
 }
 .accordion-body {
     display: none;
-    padding: 14px 16px;
+    padding: 8px 16px;
     background: var(--movas-surface);
 }
 .accordion-body.show { display: block; }
@@ -782,10 +782,187 @@ html, body {
 /* ── RESPONSIVE ─────────────────────────────────── */
 @media (max-width: 768px) {
     .movas-sidebar   { display: none; }
-    .movas-main      { margin-left: 0; padding: 16px 14px; }
+    .movas-main      { margin-left: 0; padding: 16px 14px 28px}
     .movas-bottom-nav{ display: flex; }
     body { padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* ── BOOKING FAB DI BOTTOM NAV ──────────────────────────── */
+.bottom-nav-booking {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-decoration: none;
+    color: var(--movas-text2);
+    font-size: 10px;
+    font-weight: 500;
+    position: relative;
+    margin-top: -20px;  
+}
+
+.booking-fab {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a2d7c, #00b4d8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,180,216,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.booking-fab i {
+    color: #ffffff;
+    font-size: 20px;
+}
+
+.bottom-nav-booking:hover .booking-fab,
+.bottom-nav-booking.active .booking-fab {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0,180,216,0.6);
+}
+
+.bottom-nav-booking span {
+    color: var(--movas-text2);
+    font-size: 10px;
+}
+
+.bottom-nav-booking.active span {
+    color: var(--movas-cyan);
+}
+
+@media (min-width: 769px) {
+    .bottom-nav-booking {
+        display: none; /* Desktop pakai sidebar */
+    }
+}
+
+/* ── ACCORDION ───────────────────────────────────────────── */
+.accordion-body {
+    display: none;
+}
+
+/* ── FLATPICKR MOVAS THEME ──────────────────────────────── */
+.flatpickr-calendar {
+    background: var(--movas-surface) !important;
+    border: 1px solid var(--movas-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+}
+
+.flatpickr-day {
+    color: var(--movas-text) !important;
+    border-radius: 8px !important;
+}
+
+.flatpickr-day:hover {
+    background: var(--movas-surface2) !important;
+}
+
+.flatpickr-day.selected {
+    background: var(--movas-accent) !important;
+    border-color: var(--movas-accent) !important;
+}
+
+.flatpickr-day.today {
+    border-color: var(--movas-cyan) !important;
+}
+
+.flatpickr-months {
+    background: var(--movas-surface) !important;
+}
+
+.flatpickr-month {
+    color: var(--movas-text) !important;
+    fill: var(--movas-text) !important;
+}
+
+.flatpickr-weekday {
+    color: var(--movas-text3) !important;
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+    fill: var(--movas-text) !important;
+}
+
+.flatpickr-day.disabled {
+    color: var(--movas-text3) !important;
+    opacity: 0.4;
+}
+
+/* ── FIX DROPDOWN CABANG ─────────────────────────────────── */
+#cabang-dropdown {
+    position: relative;
+}
+
+#cabang-options {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 999; /* ← tinggi agar tidak terpotong */
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+/* Parent card jangan overflow hidden */
+.movas-card {
+    overflow: visible !important;
+}
+
+.movas-card-body {
+    overflow: visible !important;
+}
+
+/* ── DROPDOWN SMOOTH ─────────────────────────────────────── */
+.movas-select-options {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+}
+
+.movas-select-options.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* ── DROPDOWN SMOOTH WAKTU & CABANG ─────────────────────── */
+#waktu-options,
+#cabang-options {
+    opacity: 0 !important;
+    transform: translateY(-8px) !important;
+    pointer-events: none !important;
+    transition: opacity 0.2s ease, transform 0.2s ease !important;
+    display: block !important;
+    visibility: hidden;
+}
+
+#waktu-options.show,
+#cabang-options.show {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    pointer-events: auto !important;
+    visibility: visible;
+}
+
+/* ── KENDARAAN DETAIL SMOOTH ─────────────────────────────── */
+[id^="detail-"] {
+    transition: all 0.25s ease;
+    overflow: hidden;
+}
+
+[id^="detail-"] {
+    transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
+    overflow: hidden;
+}
+
+/* MOVAS LOADER */
 
 #movas-loader-overlay {
     position: fixed;
@@ -1020,6 +1197,31 @@ html, body {
 }
 .ai-typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .ai-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── MOVAS AI CHAT ANIMATION ─────────────────────────────── */
+#movas-ai-chat-window {
+    display          : none;
+    transform-origin : bottom right;
+    transition       : transform 0.25s ease, opacity 0.25s ease, visibility 0.25s ease;
+    transform        : scale(0.8) translateY(20px);
+    opacity          : 0;
+    visibility       : hidden;
+    pointer-events   : none;
+}
+
+#movas-ai-chat-window.chat-open {
+    transform      : scale(1) translateY(0);
+    opacity        : 1;
+    visibility     : visible;
+    pointer-events : auto;
+}
+
+#movas-ai-chat-window.chat-closed {
+    transform      : scale(0.8) translateY(20px);
+    opacity        : 0;
+    visibility     : hidden;
+    pointer-events : none;
+}
 
 @keyframes aiTypingBounce {
     0%,100% { transform: translateY(0); opacity: 0.4; }

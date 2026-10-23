@@ -1,0 +1,344 @@
+:root {
+    --pub-bg       : #f5f7fa;
+    --pub-surface  : #ffffff;
+    --pub-surface2 : #f8f9fc;
+    --pub-border   : #e3e6f0;
+    --pub-text     : #2d3748;
+    --pub-text2    : #718096;
+    --pub-text3    : #a0aec0;
+    --pub-accent   : #1a2d7c;
+    --pub-cyan     : #00b4d8;
+    --pub-danger   : #e74a3b;
+    --pub-safe     : #1cc88a;
+    --pub-warn     : #f6c23e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--pub-bg);
+    color: var(--pub-text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+}
+/* ── HEADER ──────────────────────────────────────────── */
+.pub-header {
+    background: linear-gradient(135deg, #1a2d7c 0%, #0d1b4f 100%);
+    padding: 20px 0 24px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+.pub-header img {
+    object-fit: contain;
+    position: relative;
+    top: 2px;
+}
+.pub-header-title {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.pub-header-sub {
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    margin-top: 2px;
+}
+/* ── CONTAINER ───────────────────────────────────────── */
+.pub-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px 16px;
+}
+/* ── CARD ────────────────────────────────────────────── */
+.pub-card {
+    background: var(--pub-surface);
+    border-radius: 14px;
+    border: 1px solid var(--pub-border);
+    margin-bottom: 16px;
+    overflow: visible;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.pub-card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--pub-border);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--pub-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pub-card-header i {
+    color: var(--pub-cyan);
+    font-size: 15px;
+}
+.pub-card-body {
+    padding: 16px 18px;
+}
+/* ── INPUT ───────────────────────────────────────────── */
+.pub-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pub-text2);
+    display: block;
+    margin-bottom: 6px;
+}
+.pub-input {
+    width: 100%;
+    background: var(--pub-surface2);
+    border: 1.5px solid var(--pub-border);
+    color: var(--pub-text);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.15s;
+}
+.pub-input:focus {
+    border-color: var(--pub-cyan);
+}
+.pub-input::placeholder {
+    color: var(--pub-text3);
+}
+.pub-form-group {
+    margin-bottom: 14px;
+}
+/* ── UNIT KENDARAAN ──────────────────────────────────── */
+.pub-unit-row {
+    background: var(--pub-surface2);
+    border: 1.5px solid var(--pub-border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    position: relative;
+}
+.pub-unit-badge {
+    display: inline-block;
+    background: var(--pub-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+.pub-unit-remove {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--pub-danger);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+}
+/* ── TOGGLE BUTTON ───────────────────────────────────── */
+.pub-toggle-btn {
+    display: flex;
+    gap: 8px;
+}
+.pub-toggle-btn button {
+    flex: 1;
+    padding: 9px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1.5px solid var(--pub-border);
+    background: var(--pub-surface2);
+    color: var(--pub-text);
+}
+.pub-toggle-btn button.active {
+    background: var(--pub-accent);
+    color: #fff;
+    border-color: var(--pub-accent);
+}
+/* ── LOKASI BUTTON ───────────────────────────────────── */
+.pub-lokasi-btn {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.pub-lokasi-btn button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1.5px solid var(--pub-border);
+    background: var(--pub-surface2);
+    color: var(--pub-text);
+}
+.pub-lokasi-btn button.active {
+    background: var(--pub-accent);
+    color: #fff;
+    border-color: var(--pub-accent);
+}
+/* ── CABANG DROPDOWN ─────────────────────────────────── */
+.pub-select-wrapper {
+    position: relative;
+}
+.pub-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--pub-surface2);
+    border: 1.5px solid var(--pub-border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: border-color 0.15s;
+}
+.pub-select-trigger:hover {
+    border-color: var(--pub-cyan);
+}
+.pub-select-options {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--pub-surface);
+    border: 1.5px solid var(--pub-border);
+    border-radius: 10px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 999;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    display: none;
+}
+.pub-select-options.show {
+    display: block;
+}
+.pub-select-option {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    border-bottom: 1px solid var(--pub-border);
+    transition: background 0.1s;
+}
+.pub-select-option:last-child {
+    border-bottom: none;
+}
+.pub-select-option:hover,
+.pub-select-option.active {
+    background: #f0f4ff;
+    color: var(--pub-accent);
+}
+.pub-select-option-sub {
+    font-size: 11px;
+    color: var(--pub-text3);
+    margin-top: 2px;
+}
+/* ── SUBMIT BUTTON ───────────────────────────────────── */
+.pub-submit-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1a2d7c, #00b4d8);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+.pub-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+/* ── ADD UNIT BUTTON ─────────────────────────────────── */
+.pub-add-unit-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1.5px dashed var(--pub-cyan);
+    color: var(--pub-cyan);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.15s;
+}
+.pub-add-unit-btn:hover {
+    background: rgba(0,180,216,0.05);
+}
+/* ── SLOT WAKTU ──────────────────────────────────────── */
+.pub-slot-wrapper {
+    background: var(--pub-surface2);
+    border: 1.5px solid var(--pub-border);
+    border-radius: 10px;
+    padding: 12px;
+}
+.pub-slot-placeholder {
+    font-size: 12px;
+    color: var(--pub-text3);
+    text-align: center;
+}
+.pub-slot-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.pub-slot-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid var(--pub-border);
+    background: var(--pub-surface);
+    color: var(--pub-text);
+    font-family: 'Inter', sans-serif;
+    transition: all 0.15s;
+}
+.pub-slot-btn.active {
+    background: var(--pub-accent);
+    color: #fff;
+    border-color: var(--pub-accent);
+}
+/* ── INFO BOX ────────────────────────────────────────── */
+.pub-info-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #1e40af;
+    margin-bottom: 16px;
+}
+/* ── FOOTER ──────────────────────────────────────────── */
+.pub-footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--pub-text3);
+    margin-top: 24px;
+}
+/* ── FLATPICKR OVERRIDE ──────────────────────────────── */
+.flatpickr-input {
+    background: var(--pub-surface2) !important;
+    color: var(--pub-text) !important;
+    border: 1.5px solid var(--pub-border) !important;
+    border-radius: 10px !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+    width: 100% !important;
+    outline: none !important;
+    cursor: pointer !important;
+    font-family: 'Inter', sans-serif !important;
+}
+@media (max-width: 480px) {
+    .pub-container { padding: 16px 12px; }
+    .pub-card-body { padding: 14px; }
+}

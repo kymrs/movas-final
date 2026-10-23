@@ -92,6 +92,7 @@ class M_movas extends CI_Model
             'Aus', 'Habis', 'Mati', 'Getas', 'Hilang',
             'Tidak Berfungsi', 'Tidak Ada', 'Perlu Overhaul',
         ];
+        
         $kondisi_negatif_perhatian = [
             'Kotor', 'Tipis', 'Lemah', 'Kurang Dingin', 'Kurang',
             'Kendur', 'Berat', 'Perlu Servis', 'Perlu Tune Up',
@@ -233,7 +234,7 @@ class M_movas extends CI_Model
             'tali_kipas'    => 'Tali Kipas',
             'oli_mesin'     => 'Oli Mesin',
             'filter_oli'    => 'Filter Oli',
-            'slang_radiator'=> 'Slang Radiator',
+            'selang_radiator'=> 'Selang Radiator',
             'air_radiator'  => 'Air Radiator',
             'tune_up'       => 'Tune Up',
             'busi'          => 'Busi',
@@ -625,10 +626,10 @@ class M_movas extends CI_Model
     }
 
     // ── GET SEMUA KENDARAAN UNTUK KONTEKS AI ──────────────────
-    public function get_konteks_ai($customer_id)
+    public function get_konteks_ai($customer_id, $is_pro = false)
     {
-        // Ambil semua kendaraan
-        $kendaraan_list = $this->db->select('
+        // ── Ambil semua kendaraan ──────────────────────────────
+        $query = $this->db->select('
                 i.nopol, i.tipe, i.jenis_kendaraan,
                 MAX(i.awal_service) AS terakhir_service,
                 MAX(i.km)           AS km_terakhir,
@@ -639,10 +640,11 @@ class M_movas extends CI_Model
             ->where('i.app_status', 'approved')
             ->where('i.is_active', 1)
             ->group_by('i.nopol')
-            ->order_by('terakhir_service', 'DESC')
-            ->get()->result_array();
+            ->order_by('terakhir_service', 'DESC');
 
-            $konteks = [];
+        $kendaraan_list = $query->get()->result_array();
+
+        $konteks = [];
 
         foreach ($kendaraan_list as $k) {
             $item = [
@@ -736,7 +738,28 @@ class M_movas extends CI_Model
             // ── Simpan ke konteks ──────────────────────────────────
             $konteks[] = $item;
         }
-        return $konteks;
-    }
+        // ── Ambil booking aktif ────────────────────────────────
+        $booking_aktif = $this->db->select('
+                bs.id, bs.tgl_booking, bs.waktu_catatan,
+                bs.lokasi_service, bs.alamat_service,
+                bs.nama_cabang, bs.status, bs.created_at
+            ', FALSE)
+            ->from('mac_booking_service bs')
+            ->where('bs.customer_id', $customer_id)
+            ->where_in('bs.status', ['pending', 'dikonfirmasi'])
+            ->order_by('bs.created_at', 'DESC')
+            ->get()->result_array();
 
+        foreach ($booking_aktif as &$b) {
+            $b['detail'] = $this->db->select('nopol, km, keluhan')
+                ->where('booking_id', $b['id'])
+                ->get('mac_booking_detail')->result_array();
+        }
+
+        return [
+            'kendaraan'     => $konteks,
+            'booking_aktif' => $booking_aktif,
+            'is_pro'        => $is_pro,
+        ];
+    }
 }

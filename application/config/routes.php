@@ -51,10 +51,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 */
 
 // ── MOVAS ROUTES — taruh di ATAS $route['default_controller'] ──
-$route['get_kondisi_ajax']               = 'movas/get_kondisi_ajax';
-$route['save_feedback']                  = 'movas/save_feedback';
-$route['ai_chat']                        = 'movas/ai_chat';
 $route['get_ai_history']                 = 'movas/get_ai_chat_history';
+$route['ai_chat']                        = 'movas/ai_chat';
+$route['save_feedback']                  = 'movas/save_feedback';
+$route['get_kondisi_ajax']               = 'movas/get_kondisi_ajax';
+$route['booking']                        = 'movas/booking_publik';
+$route['booking/submit']                 = 'movas/booking_publik_submit';
+$route['(:any)/booking']                 = 'movas/booking/$1';
+$route['(:any)/booking/submit']          = 'movas/booking_submit/$1';
+$route['(:any)/booking/cancel/(:any)']   = 'movas/booking_cancel/$1/$2';
 $route['(:any)/kendaraan/(:any)']        = 'movas/kendaraan/$1/$2';
 $route['(:any)/kendaraan']               = 'movas/kendaraan_list/$1';
 $route['(:any)/profile']                 = 'movas/profile/$1';

@@ -25,10 +25,16 @@
     <!-- Fancy Box -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.36/fancybox/fancybox.css">
 
+    <!-- Flat Pickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+
+    <!-- Animate Toast -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
     <!-- Layout CSS -->
     <link rel="stylesheet" href="<?= base_url('assets/backend/css/layout.css') ?>">
 </head>
-<body>
+<body class="light-theme">
 
 <!-- ── MOVAS LOADER ───────────────────────────────────────── -->
 <div id="movas-loader-overlay">
@@ -99,6 +105,7 @@
         </div>
     </div>
 
+    <!-- Sidebar nav -->
     <nav class="sidebar-nav">
         <a href="<?= site_url($token) ?>"
         class="sidebar-nav-item <?= $page === 'vehicle_list' ? 'active' : '' ?>">
@@ -107,6 +114,10 @@
         <a href="<?= site_url($token . '/kendaraan') ?>"
         class="sidebar-nav-item <?= $page === 'kendaraan_list' ? 'active' : '' ?>">
             <i class="fas fa-list"></i> Daftar Kendaraan
+        </a>
+        <a href="<?= site_url($token . '/booking') ?>"
+        class="sidebar-nav-item <?= $page === 'booking' ? 'active' : '' ?>">
+            <i class="fas fa-tools"></i> Booking Service <!-- ← ganti ini -->
         </a>
         <a href="<?= site_url($token . '/profile') ?>"
         class="sidebar-nav-item <?= $page === 'profile' ? 'active' : '' ?>">
@@ -174,6 +185,7 @@
     <?php if ($page === 'kendaraan_detail'): $this->load->view('movas/kendaraan_detail', get_defined_vars()); endif; ?>
     <?php if ($page === 'kendaraan_list'): $this->load->view('movas/kendaraan_list', get_defined_vars()); endif; ?>
     <?php if ($page === 'profile'):       $this->load->view('movas/profile',         get_defined_vars()); endif; ?>
+    <?php if ($page === 'booking'):          $this->load->view('movas/booking',           get_defined_vars()); endif; ?>
 </main>
 
 <!-- Bottom Nav (mobile) -->
@@ -189,6 +201,16 @@
             <i class="fas fa-list"></i>
             <span>Daftar</span>
         </a>
+
+        <!-- ── TOMBOL BOOKING — tengah, lebih besar ────────── -->
+        <a href="<?= site_url($token . '/booking') ?>"
+        class="bottom-nav-booking <?= $page === 'booking' ? 'active' : '' ?>">
+            <div class="booking-fab">
+                <i class="fas fa-tools"></i> <!-- ← ganti ini -->
+            </div>
+            <span>Booking</span>
+        </a>
+
         <a href="<?= site_url($token . '/profile') ?>"
            class="bottom-nav-item <?= $page === 'profile' ? 'active' : '' ?>">
             <i class="fas fa-user-circle"></i>
@@ -197,7 +219,7 @@
         <button class="bottom-nav-item" onclick="toggleTheme()"
                 style="background:none; border:none; cursor:pointer;">
             <i class="fas fa-moon" id="theme-icon-mobile"></i>
-            <span id="theme-label-mobile">Tema</span>
+            <span id="theme-label-mobile">Gelap</span>
         </button>
     </div>
 </nav>
@@ -237,14 +259,15 @@
 
 <!-- Chat Window -->
 <div id="movas-ai-chat-window"
-     style="display:none; position:fixed;
+     style="display:none;
+            position:fixed;
             bottom:calc(var(--bottom-nav-h) + 80px); right:16px;
             width:320px; max-height:480px;
             background:var(--movas-surface);
             border:1px solid var(--movas-border);
             border-radius:16px; z-index:500;
             box-shadow:0 8px 32px rgba(0,0,0,0.3);
-            display:none; flex-direction:column;
+            flex-direction:column;
             overflow:hidden;">
 
     <!-- Header -->
@@ -339,6 +362,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.36/fancybox/fancybox.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/id.js"></script>
 
 <script>
     var MOVAS_TOKEN = '<?= $token ?>';
@@ -717,25 +742,33 @@
     var aiCurrentNopol = '';
     var aiIsLoading   = false;
     var aiHistoryLoaded = false;
+    var waitingTimer    = null;
+    var connectionTimer = null;
 
     function toggleAIChat() {
         aiChatOpen = !aiChatOpen;
         var win = document.getElementById('movas-ai-chat-window');
 
         if (aiChatOpen) {
+            // ── Open ───────────────────────────────────────────
             win.style.display = 'flex';
+            setTimeout(function() {
+                win.classList.remove('chat-closed');
+                win.classList.add('chat-open');
+            }, 10);
+
             document.getElementById('ai-badge').style.display = 'none';
-
-            // Load history pertama kali saja
-            if (!aiHistoryLoaded) {
-                loadAIHistory();
-            }
-
+            if (!aiHistoryLoaded) loadAIHistory();
             setTimeout(function() {
                 document.getElementById('ai-input').focus();
-            }, 100);
+            }, 250);
         } else {
-            win.style.display = 'none';
+            // ── Close ──────────────────────────────────────────
+            win.classList.remove('chat-open');
+            win.classList.add('chat-closed');
+            setTimeout(function() {
+                win.style.display = 'none';
+            }, 250);
         }
     }
 
@@ -918,6 +951,19 @@
                 + '</div></div>';
             }
         }, 5000);
+
+        // ── Pesan koneksi setelah 10 detik ────────────────────
+        var connectionTimer = setTimeout(function() {
+            var typingEl = document.getElementById('ai-typing');
+            if (typingEl && aiIsLoading) {
+                typingEl.innerHTML =
+                    '<div class="ai-bubble assistant" style="margin:0;">'
+                + '<div class="ai-bubble-content" style="padding:10px 14px;'
+                + ' font-size:12px; color:var(--movas-text2);">'
+                + 'Sepertinya koneksinya lagi kurang bersahabat nih 😅 ditunggu sebentar ya 😊'
+                + '</div></div>';
+            }
+        }, 13000);
         // ──────────────────────────────────────────────────────
 
         $.ajax({
@@ -934,6 +980,7 @@
 
                 // ── PALING ATAS ────────────────────────────────────────
                 clearTimeout(waitingTimer);
+                clearTimeout(connectionTimer);
                 document.getElementById('ai-typing').style.display      = 'none';
                 document.getElementById('ai-waiting-msg').style.display = 'none';
                 document.getElementById('ai-waiting-text').textContent  = '';
@@ -974,6 +1021,7 @@
 
                 // ── PALING ATAS ────────────────────────────────────────
                 clearTimeout(waitingTimer);
+                clearTimeout(connectionTimer);
                 document.getElementById('ai-typing').style.display      = 'none';
                 document.getElementById('ai-waiting-msg').style.display = 'none';
                 document.getElementById('ai-waiting-text').textContent  = '';

@@ -20,10 +20,15 @@ $(function() {
     function toggleAccordion(header) {
         var body    = $(header).next('.accordion-body');
         var chevron = $(header).find('.fa-chevron-down');
-        var isOpen  = body.hasClass('show');
+        var isOpen  = body.is(':visible');
 
-        body.toggleClass('show');
-        chevron.css('transform', isOpen ? 'rotate(0deg)' : 'rotate(180deg)');
+        if (isOpen) {
+            body.slideUp(250);
+            chevron.css('transform', 'rotate(0deg)');
+        } else {
+            body.slideDown(250);
+            chevron.css('transform', 'rotate(180deg)');
+        }
     }
 
     // Expose ke global karena dipanggil dari onclick di PHP
@@ -113,7 +118,7 @@ $(function() {
 
         var labelMap = {
             tali_kipas:'Tali Kipas', oli_mesin:'Oli Mesin', filter_oli:'Filter Oli',
-            slang_radiator:'Slang Radiator', air_radiator:'Air Radiator', tune_up:'Tune Up',
+            selang_radiator:'Selang Radiator', air_radiator:'Air Radiator', tune_up:'Tune Up',
             busi:'Busi', baterai_mesin:'Baterai', filter_udara:'Filter Udara', filter_bbm:'Filter BBM',
             oli_transmisi:'Oli Transmisi', oli_differential:'Oli Differential',
             kabel_kopling:'Kabel Kopling', master_kopling:'Master Kopling',
