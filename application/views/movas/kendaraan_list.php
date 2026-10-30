@@ -58,8 +58,19 @@
                         <?php endif; ?>
                     </div>
                     <div>
-                        <div style="font-size:14px; font-weight:600;">
-                            <?= htmlspecialchars($k['nopol']) ?>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <div style="font-size:14px; font-weight:600;">
+                                <?= htmlspecialchars($k['nopol']) ?>
+                            </div>
+                            <?php if ($is_pro): ?>
+                            <span style="font-size:9px; font-weight:700; padding:1px 6px;
+                                        border-radius:10px;
+                                        <?= !empty($k['is_pro_unit'])
+                                            ? 'background:rgba(246,194,62,0.15); color:#f6c23e; border:1px solid rgba(246,194,62,0.3);'
+                                            : 'background:rgba(150,150,150,0.1); color:var(--movas-text3); border:1px solid var(--movas-border);' ?>">
+                                <?= !empty($k['is_pro_unit']) ? '★ PRO' : 'FREE' ?>
+                            </span>
+                            <?php endif; ?>
                         </div>
                         <div style="font-size:11px; color:var(--movas-text2);">
                             <?= htmlspecialchars($k['tipe'] ?: $k['jenis_kendaraan']) ?>
@@ -74,11 +85,11 @@
                         <?php
                         if ($k['terakhir_service']) {
                             $bulan = ['01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
-                                      '05'=>'Mei','06'=>'Jun','07'=>'Jul','08'=>'Agu',
-                                      '09'=>'Sep','10'=>'Okt','11'=>'Nov','12'=>'Des'];
+                                    '05'=>'Mei','06'=>'Jun','07'=>'Jul','08'=>'Agu',
+                                    '09'=>'Sep','10'=>'Okt','11'=>'Nov','12'=>'Des'];
                             echo date('d', strtotime($k['terakhir_service'])) . ' '
-                               . $bulan[date('m', strtotime($k['terakhir_service']))] . ' '
-                               . date('Y', strtotime($k['terakhir_service']));
+                            . $bulan[date('m', strtotime($k['terakhir_service']))] . ' '
+                            . date('Y', strtotime($k['terakhir_service']));
                         }
                         ?>
                     </div>
@@ -89,7 +100,6 @@
                     <?php endif; ?>
                 </div>
             </div>
-
             <!-- ── Reminder ──────────────────────────────────────────── -->
             <?php if (!empty($k['reminder'])):
                 $r       = $k['reminder'];

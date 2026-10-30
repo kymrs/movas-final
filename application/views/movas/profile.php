@@ -42,9 +42,16 @@
                 <?php endif; ?>
                 <!-- ── END TAMBAHAN ── -->
 
-                <div style="margin-top:6px;">
+                <div style="margin-top:6px; display:flex; align-items:center; gap:6px;">
                     <?php if ($is_pro): ?>
                     <span class="plan-badge pro">★ PRO</span>
+                    <?php if ($total_pro_unit > 0): ?>
+                    <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
+                                background:rgba(246,194,62,0.15); color:#f6c23e;
+                                border:1px solid rgba(246,194,62,0.3);">
+                        <?= $total_pro_unit ?> unit
+                    </span>
+                    <?php endif; ?>
                     <?php else: ?>
                     <span class="plan-badge free">FREE</span>
                     <?php endif; ?>
@@ -56,21 +63,22 @@
 
 <!-- Statistik -->
 <div class="row mb-4" style="gap:0; align-items:stretch;">
-    <div class="col-4" style="display:flex;">
+    <div class="<?= $is_pro ? 'col-3' : 'col-4' ?>" style="padding-right:4px; display:flex;">
         <div class="stat-card" style="flex:1;">
-            <div class="stat-number" style="margin-top: 5px"><?= $profile['total_kendaraan'] ?></div>
-            <div class="stat-label">Kendaraan</div>
+            <div class="stat-number" style="margin-top:5px;"><?= $profile['total_kendaraan'] ?></div>
+            <div class="stat-label">Unit</div>
         </div>
     </div>
-    <div class="col-4" style="padding:0 6px; display:flex;">
+    <div class="<?= $is_pro ? 'col-3' : 'col-4' ?>" style="padding:0 4px; display:flex;">
         <div class="stat-card" style="flex:1;">
-            <div class="stat-number" style="margin-top: 5px"><?= $profile['total_service'] ?></div>
-            <div class="stat-label">Total Service</div>
+            <div class="stat-number" style="margin-top:5px;"><?= $profile['total_service'] ?></div>
+            <div class="stat-label">Service</div>
         </div>
     </div>
-    <div class="col-4" style="display:flex;">
+    <div class="<?= $is_pro ? 'col-3' : 'col-4' ?>"
+         style="padding:0 <?= $is_pro ? '4px' : '0 0 0 4px' ?>; display:flex;">
         <div class="stat-card" style="flex:1;">
-            <div class="stat-number" style="font-size:14px; line-height:1.3;">
+            <div class="stat-number" style="font-size:13px; line-height:1.3;">
                 <?php
                 if ($profile['terakhir_service']) {
                     $bulan = ['01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
@@ -79,11 +87,187 @@
                     $tgl = date('d', strtotime($profile['terakhir_service']));
                     $bln = $bulan[date('m', strtotime($profile['terakhir_service']))];
                     $thn = date('Y', strtotime($profile['terakhir_service']));
-                    echo $tgl . ' ' . $bln . '<br><span style="font-size:12px;">' . $thn . '</span>';
+                    echo $tgl . ' ' . $bln . '<br><span style="font-size:11px;">' . $thn . '</span>';
                 } else { echo '—'; }
                 ?>
             </div>
-            <div class="stat-label">Terakhir Service</div>
+            <div class="stat-label">Terakhir</div>
+        </div>
+    </div>
+    <?php if ($is_pro): ?>
+        <?php
+        $total_pro_unit_stat = $this->db->where('customer_id', $customer['id'])
+            ->where('is_pro', 1)
+            ->group_start()
+                ->where('expired_at IS NULL', NULL, FALSE)
+                ->or_where('expired_at >', date('Y-m-d H:i:s'))
+            ->group_end()
+            ->count_all_results('mac_movas_pro_unit');
+        ?>
+    <div class="col-3" style="padding-left:4px; display:flex;">
+        <div class="stat-card" style="flex:1; cursor:pointer;
+            border:1px solid rgba(246,194,62,0.3);
+            background:rgba(246,194,62,0.05);
+            transition:all 0.15s;"
+            onclick="$('#modalUnitPro').modal('show')"
+            onmouseover="this.style.background='rgba(246,194,62,0.1)'"
+            onmouseout="this.style.background='rgba(246,194,62,0.05)'">
+            <div class="stat-number" style="margin-top:5px; color:#f6c23e; font-size:18px;">
+                <?= $total_pro_unit_stat ?>
+            </div>
+            <div class="stat-label" style="color:#f6c23e; font-size:10px;">
+                PRO <i class="fas fa-chevron-right" style="font-size:8px;"></i>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+</div>
+
+<!-- ── MODAL UNIT PRO ─────────────────────────────────────── -->
+<div class="modal fade" id="modalUnitPro" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content"
+             style="border-radius:16px; overflow:hidden; border:none;
+                    background:var(--movas-surface);">
+
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#1a2d7c,#00b4d8);
+                        padding:14px 18px; display:flex;
+                        align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:16px;">★</span>
+                    <div>
+                        <div style="color:#fff; font-weight:700; font-size:14px;">Unit PRO</div>
+                        <div style="color:rgba(255,255,255,0.6); font-size:11px;">
+                            Kendaraan dengan akses PRO aktif
+                        </div>
+                    </div>
+                </div>
+                <button type="button" data-dismiss="modal"
+                        style="background:none; border:none; color:#fff;
+                               font-size:20px; opacity:0.7; cursor:pointer;
+                               line-height:1;">&times;</button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding:0; max-height:400px; overflow-y:auto;">
+                <?php
+                $pro_units = $this->db->select('p.nopol, p.activated_at, p.expired_at')
+                    ->from('mac_movas_pro_unit p')
+                    ->where('p.customer_id', $customer['id'])
+                    ->where('p.is_pro', 1)
+                    ->group_start()
+                        ->where('p.expired_at IS NULL', NULL, FALSE)
+                        ->or_where('p.expired_at >', date('Y-m-d H:i:s'))
+                    ->group_end()
+                    ->order_by('p.nopol', 'ASC')
+                    ->get()->result_array();
+
+                $bulan_panjang = ['01'=>'Januari','02'=>'Februari','03'=>'Maret',
+                    '04'=>'April','05'=>'Mei','06'=>'Juni','07'=>'Juli',
+                    '08'=>'Agustus','09'=>'September','10'=>'Oktober',
+                    '11'=>'November','12'=>'Desember'];
+
+                if (empty($pro_units)):
+                ?>
+                <div style="text-align:center; padding:32px 16px; color:var(--movas-text3);">
+                    <i class="fas fa-star" style="font-size:28px; opacity:0.2;
+                       display:block; margin-bottom:8px;"></i>
+                    Belum ada unit PRO.
+                </div>
+                <?php else: ?>
+                <?php foreach ($pro_units as $idx => $pu):
+                    // Ambil tipe dari invoice
+                    $inv_unit = $this->db->select('tipe, jenis_kendaraan')
+                        ->where('customer_id', $customer['id'])
+                        ->where('nopol', $pu['nopol'])
+                        ->where('app_status', 'approved')
+                        ->order_by('created_at', 'DESC')
+                        ->limit(1)
+                        ->get('mac_invoice')->row_array();
+
+                    $tipe   = $inv_unit['tipe'] ?? '-';
+                    $jenis  = $inv_unit['jenis_kendaraan'] ?? 'Mobil';
+                    $is_last = ($idx === count($pro_units) - 1);
+
+                    // Sisa hari
+                    $sisa_hari = null;
+                    if (!empty($pu['expired_at'])) {
+                        $sisa_hari = ceil((strtotime($pu['expired_at']) - time()) / 86400);
+                    }
+
+                    // Format tanggal
+                    $fmt_activated = !empty($pu['activated_at'])
+                        ? date('d', strtotime($pu['activated_at'])) . ' '
+                          . $bulan_panjang[date('m', strtotime($pu['activated_at']))] . ' '
+                          . date('Y', strtotime($pu['activated_at']))
+                        : null;
+
+                    $fmt_expired = !empty($pu['expired_at'])
+                        ? date('d', strtotime($pu['expired_at'])) . ' '
+                          . $bulan_panjang[date('m', strtotime($pu['expired_at']))] . ' '
+                          . date('Y', strtotime($pu['expired_at']))
+                        : null;
+                ?>
+                <div style="display:flex; align-items:center; gap:12px;
+                            padding:14px 18px;
+                            <?= $is_last ? '' : 'border-bottom:1px solid var(--movas-border);' ?>">
+
+                    <!-- Icon -->
+                    <div style="width:38px; height:38px; border-radius:10px; flex-shrink:0;
+                                background:rgba(246,194,62,0.1);
+                                display:flex; align-items:center; justify-content:center;">
+                        <i class="fas <?= strtolower($jenis) === 'motor' ? 'fa-motorcycle' : 'fa-car' ?>"
+                           style="color:#f6c23e; font-size:15px;"></i>
+                    </div>
+
+                    <!-- Info -->
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:700; font-size:14px; color:var(--movas-text);">
+                            <?= htmlspecialchars($pu['nopol']) ?>
+                        </div>
+                        <div style="font-size:11px; color:var(--movas-text3); margin-top:1px;">
+                            <?= htmlspecialchars($tipe) ?>
+                            <?php if ($fmt_activated): ?>
+                            · Aktif sejak <?= $fmt_activated ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Badge expire -->
+                    <div style="flex-shrink:0; text-align:right;">
+                        <?php if ($sisa_hari === null): ?>
+                        <!-- <span style="font-size:10px; font-weight:700; padding:3px 8px;
+                                     border-radius:10px; background:rgba(28,200,138,0.12);
+                                     color:#1cc88a; border:1px solid rgba(28,200,138,0.3);">
+                            Tanpa Expire
+                        </span> -->
+                        <?php elseif ($sisa_hari <= 3): ?>
+                        <span style="font-size:10px; font-weight:700; padding:3px 8px;
+                                     border-radius:10px; background:rgba(231,74,59,0.1);
+                                     color:#e74a3b; border:1px solid rgba(231,74,59,0.3);">
+                            <?= $sisa_hari ?> hari lagi
+                        </span>
+                        <?php elseif ($sisa_hari <= 7): ?>
+                        <span style="font-size:10px; font-weight:700; padding:3px 8px;
+                                     border-radius:10px; background:rgba(246,194,62,0.12);
+                                     color:#f6c23e; border:1px solid rgba(246,194,62,0.3);">
+                            <?= $sisa_hari ?> hari lagi
+                        </span>
+                        <?php else: ?>
+                        <span style="font-size:10px; font-weight:700; padding:3px 8px;
+                                     border-radius:10px; background:rgba(77,124,254,0.1);
+                                     color:#4d7cfe; border:1px solid rgba(77,124,254,0.3);">
+                            s/d <?= $fmt_expired ?>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+
+                </div>
+                <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
         </div>
     </div>
 </div>

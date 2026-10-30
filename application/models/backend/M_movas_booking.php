@@ -50,7 +50,7 @@ class M_movas_booking extends CI_Model
     // ── GET RIWAYAT BOOKING ────────────────────────────────
     public function get_riwayat_booking($customer_id)
     {
-        return $this->db->select('
+        $list = $this->db->select('
                 bs.id, bs.tgl_booking, bs.waktu_catatan,
                 bs.lokasi_service, bs.alamat_service,
                 bs.status, bs.dibatalkan_oleh, bs.alasan_batal,
@@ -62,6 +62,28 @@ class M_movas_booking extends CI_Model
             ->order_by('bs.created_at', 'DESC')
             ->limit(10)
             ->get()->result_array();
+
+        // ── Ambil catatan invoice per unit ─────────────────────
+        foreach ($list as &$b) {
+            $rows = $this->db->select('nopol, catatan')
+                ->from('mac_invoice')
+                ->where('booking_id', $b['id'])
+                ->where('app_status', 'approved')
+                ->where('is_active', 1)
+                ->where("TRIM(IFNULL(catatan, '')) <> ''", NULL, FALSE)
+                ->get()->result_array();
+
+            $map = [];
+            foreach ($rows as $r) {
+                $cat = trim($r['catatan']);
+                if ($cat === '' || $cat === '-') continue;
+                $map[strtoupper(trim($r['nopol']))] = $cat;
+            }
+            $b['catatan_invoice'] = $map;
+        }
+        unset($b);
+
+        return $list;
     }
 
     // ── SAVE BOOKING ───────────────────────────────────────
@@ -106,6 +128,51 @@ class M_movas_booking extends CI_Model
             ]);
 
         return TRUE;
+    }
+
+    // ── HAPUS UNIT DARI BOOKING ────────────────────────────────
+    public function hapus_unit_booking($booking_id, $nopol, $customer_id)
+    {
+        // Pastikan booking milik customer ini
+        $booking = $this->db->select('id, status')
+            ->where('id', $booking_id)
+            ->where('customer_id', $customer_id)
+            ->get('mac_booking_service')->row_array();
+
+        if (empty($booking)) {
+            return ['status' => FALSE, 'error' => 'Booking tidak ditemukan.'];
+        }
+
+        // Hanya boleh saat masih menunggu konfirmasi
+        if ($booking['status'] !== 'pending') {
+            return ['status' => FALSE, 'error' => 'Unit hanya bisa dihapus saat booking masih Menunggu Konfirmasi.'];
+        }
+
+        // Unit harus ada di booking ini
+        $ada = $this->db->where('booking_id', $booking_id)
+            ->where('nopol', $nopol)
+            ->count_all_results('mac_booking_detail');
+
+        if ($ada === 0) {
+            return ['status' => FALSE, 'error' => 'Unit tidak ditemukan di booking ini.'];
+        }
+
+        // Minimal harus tersisa 1 unit
+        $total = $this->db->where('booking_id', $booking_id)
+            ->count_all_results('mac_booking_detail');
+
+        if ($total <= 1) {
+            return ['status' => FALSE, 'error' => 'Booking harus memiliki minimal 1 unit. Gunakan Batalkan Booking jika ingin membatalkan seluruhnya.'];
+        }
+
+        $this->db->where('booking_id', $booking_id)
+            ->where('nopol', $nopol)
+            ->delete('mac_booking_detail');
+
+        $this->db->where('id', $booking_id)
+            ->update('mac_booking_service', ['updated_at' => date('Y-m-d H:i:s')]);
+
+        return ['status' => TRUE, 'message' => 'Unit ' . $nopol . ' berhasil dihapus dari booking.'];
     }
 
     // ── GET BOOKING BY ID ──────────────────────────────────

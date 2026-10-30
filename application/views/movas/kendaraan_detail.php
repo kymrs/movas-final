@@ -153,7 +153,19 @@ function renderFotoGallery($fotos) {
                 <?php endif; ?>
             </div>
             <div>
-                <div class="sticky-nopol"><?= htmlspecialchars($nopol) ?></div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <div class="sticky-nopol"><?= htmlspecialchars($nopol) ?></div>
+                    <!-- ── Badge PRO/FREE ──────────────────────── -->
+                    <?php if ($is_pro): ?>
+                    <span style="font-size:9px; font-weight:700; padding:2px 7px;
+                                border-radius:10px;
+                                <?= $is_pro_unit
+                                    ? 'background:rgba(246,194,62,0.2); color:#f6c23e; border:1px solid rgba(246,194,62,0.4);'
+                                    : 'background:rgba(150,150,150,0.15); color:#888; border:1px solid rgba(150,150,150,0.3);' ?>">
+                        <?= $is_pro_unit ? '★ PRO' : 'FREE' ?>
+                    </span>
+                    <?php endif; ?>
+                </div>
                 <div class="sticky-sub">
                     <?= htmlspecialchars($kendaraan['tipe'] ?: '—') ?>
                     &nbsp;·&nbsp; <?= $kendaraan['jenis_kendaraan'] ?>
@@ -164,6 +176,7 @@ function renderFotoGallery($fotos) {
             </div>
         </div>
         <div class="sticky-right">
+            <?php if ($is_pro_unit): ?>
             <a href="<?= site_url($token . '/download/' . urlencode($nopol)) ?>"
             style="display:inline-flex; align-items:center; gap:6px;
                     background:var(--movas-surface2); border:1px solid var(--movas-border);
@@ -172,6 +185,16 @@ function renderFotoGallery($fotos) {
                 <i class="fas fa-file-pdf" style="color:#e74a3b;"></i>
                 <span class="sticky-download-text">Download Riwayat</span>
             </a>
+            <?php else: ?>
+            <span style="display:inline-flex; align-items:center; gap:6px;
+                        background:var(--movas-surface2); border:1px solid var(--movas-border);
+                        color:var(--movas-text3); padding:6px 12px; border-radius:8px;
+                        font-size:11px; font-weight:500; cursor:not-allowed; opacity:0.5;"
+                title="Upgrade unit ini ke PRO untuk download riwayat">
+                <i class="fas fa-lock" style="color:var(--movas-text3);"></i>
+                <span class="sticky-download-text">Download Riwayat</span>
+            </span>
+            <?php endif; ?>
         </div>
     </div>
     <!-- Spacer agar konten tidak tertutup sticky header -->
@@ -212,56 +235,79 @@ function renderFotoGallery($fotos) {
             Pilih Tanggal Service
         </div>
         <div class="movas-select-wrapper" id="tanggal-dropdown">
-                <!-- Trigger -->
-                <div class="movas-select-trigger" onclick="toggleDropdown()">
-                    <?php
-                    $chip    = $chip_tanggal[0];
-                    $bulan   = ['01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
-                                '05'=>'Mei','06'=>'Jun','07'=>'Jul','08'=>'Agu',
-                                '09'=>'Sep','10'=>'Okt','11'=>'Nov','12'=>'Des'];
-                    $tgl_sel = date('d', strtotime($chip['tgl_service'])) . ' '
-                            . $bulan[date('m', strtotime($chip['tgl_service']))] . ' '
-                            . date('Y', strtotime($chip['tgl_service']));
-                    ?>
-                    <div class="movas-select-selected">
-                        <div class="movas-select-dot"></div>
-                        <div>
-                            <div class="movas-select-tgl"><?= $tgl_sel ?></div>
-                            <?php if (!empty($chip['jenis_service'])): ?>
-                            <div class="movas-select-sub"><?= $chip['jenis_service'] ?></div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <i class="fas fa-chevron-down movas-select-arrow"></i>
-                </div>
-
-                <!-- Options -->
-                <div class="movas-select-options" id="dropdown-options">
-                    <?php foreach ($chip_tanggal as $idx => $chip):
-                        $tgl_opt = date('d', strtotime($chip['tgl_service'])) . ' '
-                                . $bulan[date('m', strtotime($chip['tgl_service']))] . ' '
-                                . date('Y', strtotime($chip['tgl_service']));
-                    ?>
-                    <div class="movas-select-option <?= $idx === 0 ? 'active' : '' ?>"
-                        data-sesi-id="<?= $chip['sesi_id'] ?>"
-                        data-catatan="<?= htmlspecialchars($chip['catatan'] ?? '') ?>"
-                        data-tgl="<?= $tgl_opt ?>"
-                        data-jenis="<?= htmlspecialchars($chip['jenis_service'] ?? '') ?>"
-                        onclick="selectTanggal(this)">
-                        <div class="movas-option-dot <?= $idx === 0 ? 'active' : '' ?>"></div>
-                        <div>
-                            <div class="movas-option-tgl"><?= $tgl_opt ?></div>
-                            <?php if (!empty($chip['jenis_service'])): ?>
-                            <div class="movas-option-sub"><?= $chip['jenis_service'] ?></div>
-                            <?php endif; ?>
-                        </div>
-                        <?php if ($idx === 0): ?>
-                        <span class="movas-option-badge">Terkini</span>
+            <!-- Trigger -->
+            <div class="movas-select-trigger" onclick="toggleDropdown()">
+                <?php
+                $chip    = $chip_tanggal[0];
+                $bulan   = ['01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
+                            '05'=>'Mei','06'=>'Jun','07'=>'Jul','08'=>'Agu',
+                            '09'=>'Sep','10'=>'Okt','11'=>'Nov','12'=>'Des'];
+                $tgl_sel = date('d', strtotime($chip['tgl_service'])) . ' '
+                        . $bulan[date('m', strtotime($chip['tgl_service']))] . ' '
+                        . date('Y', strtotime($chip['tgl_service']));
+                ?>
+                <div class="movas-select-selected">
+                    <div class="movas-select-dot"></div>
+                    <div>
+                        <div class="movas-select-tgl"><?= $tgl_sel ?></div>
+                        <?php if (!empty($chip['jenis_service'])): ?>
+                        <div class="movas-select-sub"><?= $chip['jenis_service'] ?></div>
                         <?php endif; ?>
                     </div>
-                    <?php endforeach; ?>
                 </div>
+                <i class="fas fa-chevron-down movas-select-arrow"></i>
             </div>
+
+            <!-- Options -->
+            <div class="movas-select-options" id="dropdown-options">
+                <?php foreach ($chip_tanggal as $idx => $chip):
+                    $tgl_opt = date('d', strtotime($chip['tgl_service'])) . ' '
+                            . $bulan[date('m', strtotime($chip['tgl_service']))] . ' '
+                            . date('Y', strtotime($chip['tgl_service']));
+                ?>
+                <div class="movas-select-option <?= $idx === 0 ? 'active' : '' ?>"
+                    data-sesi-id="<?= $chip['sesi_id'] ?>"
+                    data-catatan="<?= htmlspecialchars($chip['catatan'] ?? '') ?>"
+                    data-tgl="<?= $tgl_opt ?>"
+                    data-jenis="<?= htmlspecialchars($chip['jenis_service'] ?? '') ?>"
+                    onclick="selectTanggal(this)">
+                    <div class="movas-option-dot <?= $idx === 0 ? 'active' : '' ?>"></div>
+                    <div>
+                        <div class="movas-option-tgl"><?= $tgl_opt ?></div>
+                        <?php if (!empty($chip['jenis_service'])): ?>
+                        <div class="movas-option-sub"><?= $chip['jenis_service'] ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <?php if ($idx === 0): ?>
+                    <span class="movas-option-badge">Terkini</span>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- ── Banner upgrade jika FREE unit & ada >1 tanggal ── -->
+        <?php if (!$is_pro_unit && count($chip_tanggal_all) > 1): ?>
+        <div style="margin-top:10px; padding:8px 12px;
+                    background:rgba(246,194,62,0.08);
+                    border:1px solid rgba(246,194,62,0.2);
+                    border-radius:8px; display:flex;
+                    align-items:center; justify-content:space-between; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-lock" style="color:#f6c23e; font-size:12px; flex-shrink:0;"></i>
+                <span style="font-size:11px; color:var(--movas-text2);">
+                    <strong style="color:#f6c23e;"><?= count($chip_tanggal_all) - 1 ?> tanggal lainnya</strong>
+                    tersembunyi. Upgrade ke PRO untuk lihat semua.
+                </span>
+            </div>
+            <a href="https://wa.me/6282324001500?text=Halo%20MAC%2C%20saya%20ingin%20upgrade%20unit%20<?= urlencode($nopol) ?>%20ke%20MOVAS%20PRO"
+            target="_blank"
+            style="flex-shrink:0; font-size:11px; font-weight:700;
+                    color:#f6c23e; text-decoration:none; white-space:nowrap;">
+                Upgrade →
+            </a>
+        </div>
+        <?php endif; ?>
 
         <!-- Catatan — tampil di bawah chip -->
         <?php
@@ -371,7 +417,7 @@ function renderFotoGallery($fotos) {
             <div class="accordion-body">
                 <?php // Di dalam foreach $data_kat — tambah kondisi khusus accu_tegangan
                 foreach ($data_kat as $col => $val):
-                    if (in_array($col, $skip_keys) || $val === null) continue;
+                    if (in_array($col, $skip_keys) || $val === null || $val === '' || $val === '-') continue;
                     $lbl = $label_map[$col] ?? $col;
                 ?>
                 <div class="kondisi-row">
@@ -512,7 +558,7 @@ function renderFotoGallery($fotos) {
 <?php endif; ?>
 
 <!-- ── SECTION FOTO KONDISI ─────────────────────────────── -->
-<div class="movas-card mb-4" id="foto-gallery-card">
+<!-- <div class="movas-card mb-4" id="foto-gallery-card">
     <div class="movas-card-header">
         <span>
             <i class="fas fa-camera" style="color:var(--movas-cyan);"></i>
@@ -521,24 +567,24 @@ function renderFotoGallery($fotos) {
                         color:#f6c23e; padding:2px 7px; border-radius:10px;
                         margin-left:6px; font-weight:700;">PRO</span>
         </span>
-        <?php if ($is_pro): ?>
+        <?php if ($is_pro_unit): ?>
         <span id="foto-count-label" style="font-size:11px; color:var(--movas-text3);">
             <?= count($foto_sesi) ?> foto
         </span>
         <?php endif; ?>
     </div>
     <div class="movas-card-body" id="foto-gallery-wrapper">
-        <?php if ($is_pro): ?>
+        <?php if ($is_pro_unit): ?>
             <?php if (empty($foto_sesi)): ?>
             <div style="text-align:center; padding:20px; color:var(--movas-text3);">
-                <i class="fas fa-camera" style="font-size:28px; opacity:0.3; display:block; margin-bottom:8px;"></i>
+                <i class="fas fa-camera" style="font-size:28px; opacity:0.3;
+                   display:block; margin-bottom:8px;"></i>
                 Belum ada foto kondisi untuk service ini.
             </div>
             <?php else: ?>
             <?php echo renderFotoGallery($foto_sesi); ?>
             <?php endif; ?>
         <?php else: ?>
-            <!-- Tampilan untuk FREE -->
             <div style="text-align:center; padding:24px 16px;">
                 <i class="fas fa-lock" style="font-size:32px; color:var(--movas-text3);
                    opacity:0.4; display:block; margin-bottom:12px;"></i>
@@ -550,7 +596,7 @@ function renderFotoGallery($fotos) {
                     Upgrade ke <strong style="color:#f6c23e;">PRO</strong> untuk melihat
                     foto kondisi komponen kendaraan dari setiap service.
                 </div>
-                <a href="https://wa.me/6282324001500?text=Halo%20MAC%2C%20saya%20ingin%20upgrade%20MOVAS%20ke%20PRO"
+                <a href="https://wa.me/6282324001500?text=Halo%20MAC%2C%20saya%20ingin%20upgrade%20unit%20<?= urlencode($nopol) ?>%20ke%20MOVAS%20PRO"
                    target="_blank"
                    style="display:inline-flex; align-items:center; gap:6px;
                           background:linear-gradient(135deg, #f6c23e, #e0a800);
@@ -563,7 +609,7 @@ function renderFotoGallery($fotos) {
             </div>
         <?php endif; ?>
     </div>
-</div>
+</div> -->
 
 <!-- SECTION 2: REKOMENDASI -->
 <?php if (!empty($rekomendasi)): ?>
@@ -592,8 +638,8 @@ function renderFotoGallery($fotos) {
 <div class="movas-card mb-4">
     <div class="movas-card-header">
         <span><i class="fas fa-history" style="color:var(--movas-cyan);"></i> Riwayat Service</span>
-        <?php if (!$is_pro): ?>
-        <span style="font-size:11px; color:var(--movas-warn);">Maks 6 (FREE)</span>
+        <?php if (!$is_pro_unit): ?>
+        <span style="font-size:11px; color:var(--movas-warn);">Hanya service terakhir (FREE)</span>
         <?php endif; ?>
     </div>
     <div class="movas-card-body">
@@ -621,7 +667,14 @@ function renderFotoGallery($fotos) {
                             <div style="font-size:11px; color:var(--movas-text2); margin-top:2px;">
                                 <?= htmlspecialchars($lokasi_service) ?>
                                 <?= $inv['km'] ? ' · ' . number_format($inv['km'], 0, ',', '.') . ' KM' : '' ?>
-                                <?= $inv['jenis_service'] ? ' · ' . $inv['jenis_service'] : '' ?>
+                                <?php
+                                $jenis_map = [
+                                    'berkala'     => 'Berkala',
+                                    'non_berkala' => 'Non Berkala',
+                                ];
+                                $jenis_label = $jenis_map[$inv['jenis_service']] ?? $inv['jenis_service'];
+                                ?>
+                                <?= $jenis_label ? ' · ' . $jenis_label : '' ?>
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:10px;">
@@ -688,14 +741,31 @@ function renderFotoGallery($fotos) {
             </div>
             <?php endforeach; ?>
 
-            <?php if (!$is_pro && count($riwayat) >= 6): ?>
-            <div class="upgrade-banner" style="margin-top:16px;">
-                <div class="upgrade-banner-text">
-                    <strong>⭐ Upgrade ke PRO</strong><br>
-                    <span style="font-size:11px;">Lihat seluruh riwayat service tanpa batas.</span>
+            <?php if (!$is_pro_unit && $total_riwayat > 1): ?>
+            <div style="margin-top:8px; padding:16px;
+                        background:var(--movas-surface2);
+                        border:1px dashed var(--movas-border);
+                        border-radius:10px; text-align:center;">
+                <i class="fas fa-lock" style="font-size:20px; color:var(--movas-text3);
+                opacity:0.4; display:block; margin-bottom:8px;"></i>
+                <div style="font-size:12px; font-weight:600; color:var(--movas-text); margin-bottom:4px;">
+                    <?= $total_riwayat - 1 ?> riwayat lainnya tersembunyi
                 </div>
-                <a href="https://wa.me/6287883777711?text=Halo+MAC%2C+saya+<?= urlencode($customer['customer_name']) ?>+ingin+upgrade+MOVAS+ke+PRO"
-                   class="btn-upgrade" target="_blank">Upgrade</a>
+                <div style="font-size:11px; color:var(--movas-text2); margin-bottom:12px; line-height:1.6;">
+                    Upgrade ke <strong style="color:#f6c23e;">PRO</strong>
+                    untuk melihat semua riwayat service kendaraan ini.
+                </div>
+                <a href="https://wa.me/6282324001500?text=Halo%20MAC%2C%20saya%20ingin%20upgrade%20unit%20<?= urlencode($nopol) ?>%20ke%20MOVAS%20PRO"
+                target="_blank"
+                style="display:inline-flex; align-items:center; gap:6px;
+                        background:linear-gradient(135deg, #f6c23e, #e0a800);
+                        color:#000; text-decoration:none;
+                        padding:7px 16px; border-radius:20px;
+                        font-size:11px; font-weight:700;
+                        box-shadow:0 2px 8px rgba(246,194,62,0.4);">
+                    <i class="fab fa-whatsapp" style="color:#25d366; font-size:13px;"></i>
+                    Upgrade ke PRO
+                </a>
             </div>
             <?php endif; ?>
         </div>

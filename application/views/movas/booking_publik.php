@@ -134,9 +134,9 @@
                               style="resize:none;"></textarea>
                 </div>
 
-                <!-- Cabang Tujuan -->
+                <!-- Cabang Terdekat -->
                 <div class="pub-form-group" style="margin-bottom:0;">
-                    <label class="pub-label">Cabang Tujuan <span style="color:var(--pub-danger);">*</span></label>
+                    <label class="pub-label">Cabang Terdekat <span style="color:var(--pub-danger);">*</span></label>
                     <div class="pub-select-wrapper" id="pub-cabang-dropdown">
                         <input type="hidden" id="cabang_nama">
 
@@ -245,11 +245,12 @@
                 instance.altInput.className = 'pub-input';
                 instance.altInput.style.cursor = 'pointer';
             },
-            onChange     : function(selectedDates) {
+            onChange: function(selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
-                    document.getElementById('tgl_booking_raw').value =
-                        selectedDates[0].toISOString().slice(0,10);
+                    // ── Gunakan dateStr langsung dari flatpickr ────────
+                    document.getElementById('tgl_booking_raw').value = dateStr;
                     pubUpdateSlotWaktu(selectedDates[0].getDay());
+                    cekClosedDate();
                 }
             },
         });
@@ -272,8 +273,7 @@
         html += '<div class="pub-form-group">'
               + '<label class="pub-label">Nopol <span style="color:var(--pub-danger);">*</span></label>'
               + '<input type="text" id="pub-nopol-' + idx + '" class="pub-input"'
-              + ' placeholder="Contoh: B 1234 ABC"'
-              + ' oninput="this.value=this.value.toUpperCase()">'
+              + ' placeholder="Contoh: B 1234 ABC">'
               + '</div>';
 
         // Tipe
@@ -308,7 +308,7 @@
 
         // Keluhan
         html += '<div class="pub-form-group" style="margin-bottom:0;">'
-              + '<label class="pub-label">Keluhan <span style="color:var(--pub-danger);">*</span></label>'
+              + '<label class="pub-label">Keluhan Service <span style="color:var(--pub-danger);">*</span></label>'
               + '<textarea id="pub-keluhan-' + idx + '" class="pub-input" rows="2"'
               + ' placeholder="Ceritakan keluhan kendaraan Anda..."'
               + ' style="resize:none;"></textarea>'
@@ -481,6 +481,8 @@
         });
         el.classList.add('active');
         el.querySelector('.pub-opt-dot').style.background = 'var(--pub-cyan)';
+
+        cekClosedDate();
     }
 
     document.addEventListener('click', function(e) {
@@ -517,7 +519,7 @@
             return;
         }
         if (!cabang) {
-            Swal.fire({ icon:'warning', title:'Pilih cabang tujuan.', confirmButtonColor:'#1a2d7c' });
+            Swal.fire({ icon:'warning', title:'Pilih cabang terdekat.', confirmButtonColor:'#1a2d7c' });
             return;
         }
         if (pubLokasi === 'home_service' && !alamat) {
@@ -611,6 +613,45 @@
                 btn.disabled  = false;
                 btn.innerHTML = '<i class="fas fa-calendar-check"></i> Kirim Booking Service';
                 Swal.fire({ icon:'error', title:'Terjadi Kesalahan', text:'Coba lagi beberapa saat.', confirmButtonColor:'#1a2d7c' });
+            }
+        });
+    }
+
+    function cekClosedDate() {
+        var tgl    = document.getElementById('tgl_booking_raw').value;
+        var cabang = document.getElementById('cabang_nama').value;
+
+        if (!tgl || !cabang) return;
+
+        $.ajax({
+            url     : SITE_URL + 'booking/cek_closed',
+            type    : 'POST',
+            dataType: 'JSON',
+            data    : { tgl: tgl, nama_cabang: cabang },
+            success : function(res) {
+                if (res.status && res.closed) {
+                    var alasan = res.alasan ? 'Dikarenakan ' + res.alasan + '. ' : '';
+                    Swal.fire({
+                        icon : 'info',
+                        title: 'Maaf, Tanggal Ini Tidak Tersedia',
+                        html : 'Mohon maaf, pada tanggal yang Anda pilih layanan booking '
+                            + 'kami sedang tidak tersedia. ' + alasan
+                            + '<br><br>Silakan pilih tanggal lain atau hubungi kami di '
+                            + '<strong>0823 2400 1500</strong> untuk informasi lebih lanjut. '
+                            + 'Terima kasih atas pengertiannya 🙏',
+                        confirmButtonText : 'Pilih Tanggal Lain',
+                        confirmButtonColor: '#1a2d7c',
+                    }).then(function() {
+                        document.getElementById('tgl_booking_raw').value = '';
+                        document.getElementById('waktu_catatan').value   = '';
+                        var trigger = document.getElementById('pub-waktu-trigger');
+                        if (trigger) {
+                            trigger.style.opacity      = '0.5';
+                            trigger.style.pointerEvents = 'none';
+                            document.getElementById('pub-waktu-text').textContent = 'Pilih tanggal terlebih dahulu';
+                        }
+                    });
+                }
             }
         });
     }

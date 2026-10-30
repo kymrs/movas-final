@@ -287,10 +287,10 @@ $bulan_panjang = ['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April',
                                  resize:none; font-family:'Inter',sans-serif;"><?= htmlspecialchars($customer_address) ?></textarea>
             </div>
 
-            <!-- Cabang Tujuan — Custom Dropdown -->
+            <!-- Cabang Terdekat — Custom Dropdown -->
             <div style="margin-bottom:14px;">
                 <label style="font-size:12px; color:var(--movas-text2); display:block; margin-bottom:6px;">
-                    Cabang Tujuan <span style="color:var(--movas-danger);">*</span>
+                    Cabang Terdekat <span style="color:var(--movas-danger);">*</span>
                 </label>
                 <div class="movas-select-wrapper" id="cabang-dropdown">
                     <input type="hidden" id="cabang_nama" value="">
@@ -433,6 +433,10 @@ $bulan_panjang = ['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April',
             </div>
 
             <!-- List kendaraan -->
+            <?php
+            // Tombol hapus hanya muncul jika masih pending & unit lebih dari 1
+            $bisa_hapus = ($b['status'] === 'pending' && count($b['detail']) > 1);
+            ?>
             <div style="background:var(--movas-surface2); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
                 <div style="font-size:11px; color:var(--movas-text3); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">
                     Kendaraan
@@ -451,9 +455,27 @@ $bulan_panjang = ['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April',
                             <div style="font-size:11px; color:var(--movas-text2);"><?= htmlspecialchars($d['tipe']) ?></div>
                             <?php endif; ?>
                         </div>
-                        <span style="font-size:11px; color:var(--movas-text3);">
-                            <?= $d['km'] ? number_format($d['km'], 0, ',', '.') . ' KM' : '' ?>
-                        </span>
+
+                        <!-- KM + tombol hapus unit -->
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:11px; color:var(--movas-text3);">
+                                <?= $d['km'] ? number_format($d['km'], 0, ',', '.') . ' KM' : '' ?>
+                            </span>
+
+                            <?php if ($bisa_hapus): ?>
+                            <button type="button"
+                                    data-booking-id="<?= $b['id'] ?>"
+                                    data-nopol="<?= htmlspecialchars($d['nopol']) ?>"
+                                    onclick="hapusUnitBooking(this)"
+                                    title="Hapus unit ini dari booking"
+                                    style="width:26px; height:26px; border-radius:8px; flex-shrink:0;
+                                           background:transparent; border:1px solid var(--movas-danger);
+                                           color:var(--movas-danger); font-size:11px; cursor:pointer;
+                                           display:flex; align-items:center; justify-content:center;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 <?php if ($d['keluhan']): ?>
                 <div style="font-size:11px; color:var(--movas-text2); padding:4px 0;">
@@ -462,6 +484,13 @@ $bulan_panjang = ['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April',
                 </div>
                 <?php endif; ?>
                 <?php endforeach; ?>
+
+                <?php if ($bisa_hapus): ?>
+                <div style="font-size:10px; color:var(--movas-text3); margin-top:6px;">
+                    <i class="fas fa-info-circle"></i>
+                    Unit yang tidak jadi di-service bisa dihapus selama booking belum dikonfirmasi.
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- Tombol cancel hanya jika pending -->
@@ -505,32 +534,110 @@ $bulan_panjang = ['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April',
     <div class="movas-card mb-3">
         <div class="movas-card-body">
 
+            <!-- Header: status + tanggal -->
             <div style="display:flex; justify-content:space-between;
-                        align-items:center; margin-bottom:10px;">
+                        align-items:center; margin-bottom:12px;">
                 <span style="font-size:11px; font-weight:700; padding:4px 10px;
                              border-radius:20px;
                              background:<?= $sl['color'] ?>22;
                              color:<?= $sl['color'] ?>;">
                     <?= $sl['label'] ?>
                 </span>
-                <span style="font-size:11px; color:var(--movas-text3);">
+                <span style="font-size:12px; font-weight:600; color:var(--movas-text);">
+                    <i class="fas fa-calendar-alt" style="color:var(--movas-cyan); margin-right:4px;"></i>
                     <?= $tgl_fmt ?>
                 </span>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <!-- Info: waktu, lokasi, cabang -->
+            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;">
+                <?php if (!empty($b['waktu_catatan'])): ?>
                 <div style="font-size:12px; color:var(--movas-text2);">
-                    <i class="fas fa-map-marker-alt" style="color:var(--movas-text3); margin-right:4px;"></i>
-                    <?= htmlspecialchars(str_replace('MAC ', '', $b['nama_cabang'])) ?>
+                    <i class="fas fa-clock" style="color:var(--movas-text3); width:16px;"></i>
+                    <?= htmlspecialchars($b['waktu_catatan']) ?>
                 </div>
+                <?php endif; ?>
+
                 <div style="font-size:12px; color:var(--movas-text2);">
-                    <?= count($b['detail']) ?> kendaraan
+                    <i class="fas fa-<?= $b['lokasi_service'] === 'home_service' ? 'home' : 'wrench' ?>"
+                       style="color:var(--movas-text3); width:16px;"></i>
+                    <?= $b['lokasi_service'] === 'home_service' ? 'Home Service' : 'Ke Bengkel' ?>
+                </div>
+
+                <div style="font-size:12px; color:var(--movas-text2);">
+                    <i class="fas fa-map-marker-alt" style="color:var(--movas-text3); width:16px;"></i>
+                    <?= htmlspecialchars(str_replace('MAC ', '', $b['nama_cabang'])) ?>
                 </div>
             </div>
 
-            <?php if ($b['status'] === 'dibatalkan' && $b['alasan_batal']): ?>
-            <div style="margin-top:8px; font-size:11px; color:var(--movas-danger);">
-                <i class="fas fa-info-circle"></i> <?= htmlspecialchars($b['alasan_batal']) ?>
+            <!-- Daftar kendaraan -->
+            <div style="background:var(--movas-surface2); border-radius:10px; padding:10px 12px;">
+                <div style="font-size:10px; color:var(--movas-text3); margin-bottom:6px;
+                            text-transform:uppercase; letter-spacing:0.5px;">
+                    <?= count($b['detail']) ?> Kendaraan
+                </div>
+
+                <?php foreach ($b['detail'] as $i => $d):
+                    $is_last = ($i === count($b['detail']) - 1);
+                ?>
+                <div style="padding:6px 0;
+                            <?= $is_last ? '' : 'border-bottom:1px solid var(--movas-border);' ?>">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <span style="font-size:13px; font-weight:700;">
+                                <?= htmlspecialchars($d['nopol']) ?>
+                            </span>
+                            <?php if (!empty($d['is_new_unit'])): ?>
+                            <span style="background:var(--movas-accent); color:#fff; font-size:9px;
+                                         font-weight:700; padding:1px 6px; border-radius:8px;
+                                         margin-left:6px;">BARU</span>
+                            <?php endif; ?>
+                            <?php if (!empty($d['tipe'])): ?>
+                            <div style="font-size:11px; color:var(--movas-text2);">
+                                <?= htmlspecialchars($d['tipe']) ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php if (!empty($d['km'])): ?>
+                        <span style="font-size:11px; color:var(--movas-text3); white-space:nowrap;">
+                            <?= number_format($d['km'], 0, ',', '.') ?> KM
+                        </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if (!empty($d['keluhan'])): ?>
+                    <div style="font-size:11px; color:var(--movas-text2); margin-top:4px;">
+                        <i class="fas fa-comment-alt" style="color:var(--movas-text3); margin-right:4px;"></i>
+                        <?= htmlspecialchars($d['keluhan']) ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php
+                    
+                    $cat_inv = $b['catatan_invoice'][strtoupper(trim($d['nopol']))] ?? '';
+                    if ($cat_inv !== ''):
+                    ?>
+                    <div style="margin-top:6px; padding:8px 10px; border-radius:0 8px 8px 0;
+                                background:rgba(0,180,216,0.07);
+                                border-left:3px solid var(--movas-cyan);">
+                        <div style="font-size:9px; color:var(--movas-text3); text-transform:uppercase;
+                                    letter-spacing:0.5px; margin-bottom:2px;">
+                            <i class="fas fa-clipboard-check"></i> Catatan Service
+                        </div>
+                        <div style="font-size:12px; color:var(--movas-text);">
+                            <?= nl2br(htmlspecialchars($cat_inv)) ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Alasan batal -->
+            <?php if ($b['status'] === 'dibatalkan' && !empty($b['alasan_batal'])): ?>
+            <div style="margin-top:10px; padding:8px 12px; border-radius:8px;
+                        background:rgba(231,74,59,0.08); font-size:11px; color:var(--movas-danger);">
+                <i class="fas fa-info-circle"></i>
+                Alasan: <?= htmlspecialchars($b['alasan_batal']) ?>
             </div>
             <?php endif; ?>
 
@@ -539,6 +646,27 @@ $bulan_panjang = ['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April',
     <?php endforeach; ?>
     <?php endif; ?>
 </div>
+
+<style>
+/* ── FLATPICKR DISABLED DAY ─────────────────────────────── */
+.flatpickr-day.disabled,
+.flatpickr-day.disabled:hover,
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+    background: transparent !important;
+    color: var(--movas-border) !important;
+    opacity: 0.3 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+    pointer-events: none !important;
+    cursor: default !important;
+    opacity: 0.3 !important;
+}
+</style>
 
 <!-- ── JS ────────────────────────────────────────────────────── -->
 <script>
@@ -573,6 +701,7 @@ window.addEventListener('load', function() {
             onChange: function(selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
                     updateWaktuSlots(selectedDates[0].getDay());
+                    cekClosedDate(false);
                 }
             },
         });
@@ -1064,7 +1193,7 @@ function submitBooking() {
     if (!nama_cabang) {
         Swal.fire({
             icon: 'warning', title: 'Cabang Belum Dipilih',
-            text: 'Pilih cabang tujuan terlebih dahulu.',
+            text: 'Pilih cabang terdekat terlebih dahulu.',
             confirmButtonColor: '#1a2d7c',
         });
         return;
@@ -1084,7 +1213,7 @@ function submitBooking() {
     if (!nama_cabang) {
         Swal.fire({
             icon: 'warning', title: 'Cabang Belum Dipilih',
-            text: 'Pilih cabang tujuan terlebih dahulu.',
+            text: 'Pilih cabang terdekat terlebih dahulu.',
             confirmButtonColor: '#1a2d7c',
         });
         return;
@@ -1292,6 +1421,56 @@ function cancelBooking(bookingId) {
     });
 }
 
+// ── HAPUS UNIT DARI BOOKING ────────────────────────────────────
+function hapusUnitBooking(el) {
+    var bookingId = el.getAttribute('data-booking-id');
+    var nopol     = el.getAttribute('data-nopol');
+
+    Swal.fire({
+        icon             : 'warning',
+        title            : 'Hapus Unit?',
+        html             : 'Unit <strong>' + nopol + '</strong> akan dihapus dari booking ini.',
+        showCancelButton : true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText : 'Batal',
+        confirmButtonColor: '#e74a3b',
+    }).then(function(result) {
+        if (!result.isConfirmed) return;
+
+        el.style.pointerEvents = 'none';
+        el.style.opacity       = '0.5';
+
+        $.ajax({
+            url     : SITE_URL + '<?= $token ?>/booking/hapus_unit',
+            type    : 'POST',
+            dataType: 'JSON',
+            data    : { token: MOVAS_TOKEN, booking_id: bookingId, nopol: nopol },
+            success : function(res) {
+                if (res.status) {
+                    Swal.fire({
+                        icon : 'success',
+                        title: 'Berhasil',
+                        text : res.message,
+                        timer: 1500,
+                        showConfirmButton: false,
+                    }).then(function() { location.reload(); });
+                } else {
+                    el.style.pointerEvents = 'auto';
+                    el.style.opacity       = '1';
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.error,
+                                confirmButtonColor: '#1a2d7c' });
+                }
+            },
+            error: function() {
+                el.style.pointerEvents = 'auto';
+                el.style.opacity       = '1';
+                Swal.fire({ icon: 'error', title: 'Terjadi Kesalahan',
+                            text: 'Coba lagi beberapa saat.', confirmButtonColor: '#1a2d7c' });
+            }
+        });
+    });
+}
+
 function formatKM(el) {
     var raw   = el.value.replace(/\D/g, '');
     var idx   = el.id.replace('km-', '');
@@ -1334,10 +1513,12 @@ function selectCabang(el) {
 
     document.querySelector('#cabang-dropdown .movas-select-trigger').classList.remove('open');
     document.getElementById('cabang-options').classList.remove('show');
+
+    cekClosedDate(true);
 }
 
 // Set default cabang dari invoice terakhir
-$(function() {
+window.addEventListener('load', function() {
     var defaultId = <?= intval($cabang_default_id) ?>;
     if (defaultId) {
         var defaultOpt = document.querySelector(
@@ -1346,4 +1527,68 @@ $(function() {
         if (defaultOpt) selectCabang(defaultOpt);
     }
 });
+
+// ── CEK CLOSED DATE ────────────────────────────────────────
+function cekClosedDate(fromCabang) {
+    var tgl    = document.getElementById('tgl_booking').value;
+    var cabang = document.getElementById('cabang_nama').value;
+
+    if (!tgl || !cabang) return;
+
+    $.ajax({
+        url     : SITE_URL + 'cek_closed_date',
+        type    : 'POST',
+        dataType: 'JSON',
+        data    : { tgl: tgl, nama_cabang: cabang },
+        success : function(res) {
+            if (res.status && res.closed) {
+                var alasan = res.alasan ? 'Dikarenakan ' + res.alasan + '. ' : '';
+                Swal.fire({
+                    icon : 'info',
+                    title: 'Maaf, Tanggal Ini Tidak Tersedia',
+                    html : 'Mohon maaf, pada tanggal yang Anda pilih layanan booking '
+                         + 'kami sedang tidak tersedia. ' + alasan
+                         + '<br><br>Silakan pilih tanggal lain atau hubungi kami di '
+                         + '<strong>0823 2400 1500</strong> untuk informasi lebih lanjut. '
+                         + 'Terima kasih atas pengertiannya 🙏',
+                    confirmButtonText : 'Pilih Tanggal Lain',
+                    confirmButtonColor: '#1a2d7c',
+                }).then(function() {
+                    // ── Reset flatpickr ────────────────────────────────────
+                    var fp = document.getElementById('tgl_booking')._flatpickr;
+                    if (fp) fp.clear();
+
+                    // ── Force clear semua input terkait ────────────────────
+                    document.getElementById('tgl_booking').value     = '';
+                    document.getElementById('tgl_booking_raw').value = '';
+                    document.querySelectorAll('.flatpickr-input').forEach(function(el) {
+                        el.value = '';
+                    });
+
+                    // ── Reset waktu ────────────────────────────────────────
+                    document.getElementById('waktu_catatan').value = '';
+                    var trigger = document.getElementById('waktu-trigger');
+                    if (trigger) {
+                        trigger.style.opacity       = '0.5';
+                        trigger.style.pointerEvents = 'none';
+                        document.getElementById('waktu-selected-text').textContent = 'Pilih tanggal terlebih dahulu';
+                        document.getElementById('waktu-options').innerHTML = '';
+                    }
+
+                    // ── Reset cabang ───────────────────────────────────────
+                    document.getElementById('cabang_nama').value = '';
+                    document.getElementById('cabang-selected-text').textContent  = '— Pilih Cabang —';
+                    document.getElementById('cabang-selected-text').style.color  = 'var(--movas-text3)';
+                    document.getElementById('cabang-selected-alamat').textContent = '';
+                    document.querySelectorAll('#cabang-options .movas-select-option').forEach(function(opt) {
+                        opt.classList.remove('active');
+                    });
+                    document.querySelectorAll('#cabang-options .movas-option-dot').forEach(function(dot) {
+                        dot.classList.remove('active');
+                    });
+                });
+            }
+        }
+    });
+}
 </script>

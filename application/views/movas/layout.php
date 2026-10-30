@@ -99,6 +99,22 @@
         <div class="sidebar-customer-plan">
             <?php if ($is_pro): ?>
                 <span class="plan-badge pro">★ PRO</span>
+                <?php
+                $total_pro_unit = $this->db->where('customer_id', $customer['id'])
+                    ->where('is_pro', 1)
+                    ->group_start()
+                        ->where('expired_at IS NULL', NULL, FALSE)
+                        ->or_where('expired_at >', date('Y-m-d H:i:s'))
+                    ->group_end()
+                    ->count_all_results('mac_movas_pro_unit');
+                ?>
+                <?php if ($total_pro_unit > 0): ?>
+                <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
+                            background:rgba(246,194,62,0.15); color:#f6c23e;
+                            border:1px solid rgba(246,194,62,0.3); margin-left:4px;">
+                    <?= $total_pro_unit ?> unit
+                </span>
+                <?php endif; ?>
             <?php else: ?>
                 <span class="plan-badge free">FREE</span>
             <?php endif; ?>
@@ -157,6 +173,31 @@
 <!-- Main Content -->
 <main class="movas-main">
 
+    <!-- ── BANNER EXPIRE PRO ──────────────────────────────── -->
+    <?php
+    if ($is_pro && !empty($customer['movas_pro_expired_at'])) {
+        $sisa_pro = ceil((strtotime($customer['movas_pro_expired_at']) - time()) / 86400);
+        if ($sisa_pro <= 7 && $sisa_pro > 0):
+    ?>
+    <div style="background:rgba(246,194,62,0.12); border:1px solid rgba(246,194,62,0.3);
+                border-radius:10px; padding:10px 14px; margin:12px 16px 0;
+                display:flex; align-items:center; gap:10px;">
+        <i class="fas fa-exclamation-triangle" style="color:#f6c23e; font-size:14px; flex-shrink:0;"></i>
+        <div style="font-size:12px; color:var(--movas-text); flex:1;">
+            <strong>Paket PRO akan berakhir dalam <?= $sisa_pro ?> hari</strong>
+            (<?= date('d/m/Y', strtotime($customer['movas_pro_expired_at'])) ?>).
+            Hubungi MAC untuk perpanjang.
+        </div>
+        <a href="https://wa.me/6282324001500?text=Halo%20MAC%2C%20saya%20ingin%20perpanjang%20MOVAS%20PRO"
+           target="_blank"
+           style="flex-shrink:0; font-size:11px; font-weight:700;
+                  color:#f6c23e; text-decoration:none; white-space:nowrap;">
+            Perpanjang →
+        </a>
+    </div>
+    <?php endif; } ?>
+    <!-- ── END BANNER ─────────────────────────────────────── -->
+
     <!-- ── MOVAS MOBILE HEADER ──────────────────────────── -->
     <?php if ($page !== 'kendaraan_detail'): ?>
     <div class="movas-mobile-header">
@@ -170,9 +211,25 @@
                 </div>
             </div>
         </div>
-        <div>
+        <div style="display:flex; align-items:center; gap:6px;">
             <?php if ($is_pro): ?>
             <span class="plan-badge pro">★ PRO</span>
+            <?php
+            $total_pro_unit_mobile = $this->db->where('customer_id', $customer['id'])
+                ->where('is_pro', 1)
+                ->group_start()
+                    ->where('expired_at IS NULL', NULL, FALSE)
+                    ->or_where('expired_at >', date('Y-m-d H:i:s'))
+                ->group_end()
+                ->count_all_results('mac_movas_pro_unit');
+            ?>
+            <?php if ($total_pro_unit_mobile > 0): ?>
+            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
+                        background:rgba(246,194,62,0.15); color:#f6c23e;
+                        border:1px solid rgba(246,194,62,0.3);">
+                <?= $total_pro_unit_mobile ?> unit
+            </span>
+            <?php endif; ?>
             <?php else: ?>
             <span class="plan-badge free">FREE</span>
             <?php endif; ?>
@@ -826,7 +883,7 @@
                     if (res.is_pro) {
                         label.textContent = '★ PRO — Unlimited';
                     } else {
-                        label.textContent = res.sisa >= 0 ? 'Sisa: ' + res.sisa + '/10' : '';
+                        label.textContent = res.sisa >= 0 ? 'Sisa: ' + res.sisa + '/5' : '';
                     }
                 }
 
@@ -966,6 +1023,49 @@
         }, 13000);
         // ──────────────────────────────────────────────────────
 
+        // ── Pesan model sibuk setelah 20 detik ────────────────
+        var busyTimer = setTimeout(function() {
+            var typingEl = document.getElementById('ai-typing');
+            if (typingEl && aiIsLoading) {
+                typingEl.innerHTML =
+                    '<div class="ai-bubble assistant" style="margin:0;">'
+                + '<div class="ai-bubble-content" style="padding:10px 14px;'
+                + ' font-size:12px; color:var(--movas-text2);">'
+                + '🤖 Model AI sedang sibuk melayani banyak permintaan. '
+                + 'Mohon tunggu sebentar ya 🙏 '
+                + '</div></div>';
+            }
+        }, 25000);
+
+        // ── Pesan refresh setelah 30 detik ────────────────────
+        var refreshTimer = setTimeout(function() {
+            var typingEl = document.getElementById('ai-typing');
+            if (typingEl && aiIsLoading) {
+                // ── Reset typing indicator dulu ────────────────────
+                typingEl.innerHTML = '';
+                typingEl.style.display = 'block';
+                
+                typingEl.innerHTML =
+                    '<div class="ai-bubble assistant" style="margin:0;">'
+                + '<div class="ai-bubble-content" style="padding:10px 14px;'
+                + ' font-size:12px; color:var(--movas-text2);">'
+                + '⏱️ Sepertinya respons memakan waktu lebih lama dari biasanya. '
+                + 'Coba refresh halaman dan kirim ulang pertanyaanmu ya 😊'
+                + '<br><br>'
+                + '<button onclick="location.reload()" '
+                + 'style="background:linear-gradient(135deg,#1a2d7c,#00b4d8); '
+                + 'color:#fff; border:none; border-radius:8px; '
+                + 'padding:6px 14px; font-size:12px; cursor:pointer; font-weight:600;">'
+                + '<i class="fas fa-sync-alt" style="margin-right:6px;"></i>Refresh Sekarang'
+                + '</button>'
+                + '</div></div>';
+
+                // ── Scroll ke bawah ────────────────────────────────
+                var container = document.getElementById('ai-messages');
+                if (container) container.scrollTop = container.scrollHeight;
+            }
+        }, 45000);
+
         $.ajax({
             url     : SITE_URL + 'ai_chat',
             type    : 'POST',
@@ -981,6 +1081,8 @@
                 // ── PALING ATAS ────────────────────────────────────────
                 clearTimeout(waitingTimer);
                 clearTimeout(connectionTimer);
+                clearTimeout(busyTimer);
+                clearTimeout(refreshTimer);
                 document.getElementById('ai-typing').style.display      = 'none';
                 document.getElementById('ai-waiting-msg').style.display = 'none';
                 document.getElementById('ai-waiting-text').textContent  = '';
@@ -1000,7 +1102,7 @@
                             document.getElementById('ai-send-btn').disabled = true;
                             document.getElementById('ai-input').placeholder = 'Kuota hari ini habis.';
                         } else {
-                            label.textContent = 'Sisa: ' + res.sisa + '/10';
+                            label.textContent = 'Sisa: ' + res.sisa + '/5';
                         }
                     }
 
@@ -1022,6 +1124,8 @@
                 // ── PALING ATAS ────────────────────────────────────────
                 clearTimeout(waitingTimer);
                 clearTimeout(connectionTimer);
+                clearTimeout(busyTimer);
+                clearTimeout(refreshTimer);
                 document.getElementById('ai-typing').style.display      = 'none';
                 document.getElementById('ai-waiting-msg').style.display = 'none';
                 document.getElementById('ai-waiting-text').textContent  = '';

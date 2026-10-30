@@ -34,7 +34,6 @@ class M_movas extends CI_Model
                 ->where('is_active', 1)
                 ->group_by('nopol')
                 ->order_by('terakhir', 'DESC')
-                ->limit(6)
                 ->get()->result_array();
 
             if (empty($nopol_list)) return [];
@@ -79,6 +78,22 @@ class M_movas extends CI_Model
             $k['status_kondisi'] = $sesi
                 ? $this->_hitung_status_kondisi($sesi['id'])
                 : 'belum_ada';
+
+            // ── Cek PRO unit ──────────────────────────────────────
+            $pro_unit = $this->db->where('customer_id', $customer_id)
+                ->where('nopol', $k['nopol'])
+                ->where('is_pro', 1)
+                ->get('mac_movas_pro_unit')->row_array();
+
+            $is_pro_unit = false;
+            if (!empty($pro_unit)) {
+                if (!empty($pro_unit['expired_at']) && strtotime($pro_unit['expired_at']) < time()) {
+                    $is_pro_unit = false;
+                } else {
+                    $is_pro_unit = true;
+                }
+            }
+            $k['is_pro_unit'] = $is_pro_unit;
         }
 
         return $kendaraan_list;
@@ -176,8 +191,6 @@ class M_movas extends CI_Model
             ->where('i.customer_id', $customer_id)
             ->where('s.nopol', $nopol)
             ->order_by('s.tgl_service', 'DESC');
-
-        if (!$is_pro) $q->limit(6);
 
         return $q->get()->result_array();
     }
@@ -383,7 +396,7 @@ class M_movas extends CI_Model
     }
 
     // ── RIWAYAT SERVICE (TIMELINE) ─────────────────────────────
-    public function get_riwayat($customer_id, $nopol, $is_pro)
+    public function get_riwayat($customer_id, $nopol, $is_pro = TRUE)
     {
         $q = $this->db->select('
                 i.id, i.invoice_number, i.awal_service, i.lokasi_service,
@@ -398,11 +411,8 @@ class M_movas extends CI_Model
             ->where('i.is_active', 1)
             ->order_by('i.awal_service', 'DESC');
 
-        if (!$is_pro) $q->limit(6);
-
         $invoices = $q->get()->result_array();
 
-        // Ambil detail per invoice
         foreach ($invoices as &$inv) {
             $inv['detail'] = $this->db->select('
                     item, tipe_item, qty,
@@ -429,7 +439,6 @@ class M_movas extends CI_Model
                 ->where('is_active', 1)
                 ->group_by('nopol')
                 ->order_by('terakhir', 'DESC')
-                ->limit(6)
                 ->get()->result_array();
 
             if (!empty($nopol_list)) {
@@ -594,7 +603,7 @@ class M_movas extends CI_Model
             ->get('mac_movas_ai_quota')->row_array();
 
         $jumlah = $quota['jumlah_tanya'] ?? 0;
-        $limit  = 10; // FREE = 10x per hari
+        $limit  = 5; // FREE = 5x per hari
 
         if ($jumlah >= $limit) {
             return ['allowed' => false, 'sisa' => 0];

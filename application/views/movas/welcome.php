@@ -172,6 +172,29 @@
         .footer span {
             color: rgba(0,180,216,0.5);
         }
+
+        /* ── CUSTOM SCROLLBAR ─────────────────────────────────────── */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #1a2d7c, #00b4d8);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #00b4d8, #1a2d7c);
+        }
+
+        ::-webkit-scrollbar-corner {
+            background: transparent;
+        }
     </style>
 </head>
 <body>
@@ -240,6 +263,27 @@
             <i class="fab fa-whatsapp" style="font-size:18px;"></i>
             Hubungi Mobile Auto Care
         </a>
+
+        <!-- ── Tombol Booking Service ─────────────────────────── -->
+        <div style="margin-top:12px;">
+            <a href="<?= site_url('booking') ?>" 
+            style="display:inline-flex; align-items:center; gap:8px;
+                    background:linear-gradient(135deg, #1a2d7c, #00b4d8);
+                    color:#ffffff; text-decoration:none;
+                    padding:12px 24px; border-radius:12px;
+                    font-size:13px; font-weight:600;
+                    box-shadow:0 4px 20px rgba(0,180,216,0.3);
+                    transition:all 0.2s; position:relative; overflow:hidden;"
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(0,180,216,0.4)'"
+            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(0,180,216,0.3)'">
+                <i class="fas fa-calendar-check" style="font-size:16px;"></i>
+                Booking Service Sekarang
+                <i class="fas fa-arrow-right" style="font-size:11px; opacity:0.7;"></i>
+            </a>
+            <div style="margin-top:8px; font-size:11px; color:rgba(255,255,255,0.3);">
+                Tidak perlu akun MOVAS
+            </div>
+        </div>
 
         <!-- Footer -->
         <div class="footer">

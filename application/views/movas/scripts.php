@@ -40,8 +40,17 @@ $(function() {
         var chevron = $('#chevron-timeline-' + idx);
         var isOpen  = detail.hasClass('show');
 
-        detail.toggleClass('show');
-        chevron.css('transform', isOpen ? 'rotate(0deg)' : 'rotate(180deg)');
+        if (isOpen) {
+            detail.slideUp(200, function() {
+                detail.removeClass('show');
+            });
+            chevron.css('transform', 'rotate(0deg)');
+        } else {
+            detail.slideDown(200, function() {
+                detail.addClass('show');
+            });
+            chevron.css('transform', 'rotate(180deg)');
+        }
     }
 
     window.toggleTimeline = toggleTimeline;
