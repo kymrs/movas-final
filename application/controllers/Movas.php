@@ -756,6 +756,37 @@ class Movas extends CI_Controller
         }
     }
 
+    // ── HELPER: DAFTAR NOMOR WA PENERIMA BOOKING ──────────────
+    private function _target_wa_booking($nama_cabang)
+    {
+        // Nomor pusat — selalu menerima semua booking
+        $target = ['082324001500'];
+
+        // PIC per cabang
+        $pic_cabang = [
+            'jabodetabek'   => '081213325396', // Sopandi
+            'bandung'       => '082324007900', // Priyadi
+            'yogyakarta'    => '089528305506', // Anggoro
+            'gresik'        => '081331200036', // Aang
+            'kediri'        => '081329542062', // Saryanto
+            'serang'        => '0895347999347', // Fatkhur
+            'lampung'       => '087779296081', // Agung
+            'lubuk linggau' => '082176012026', // Hermawanta
+            'palembang'     => '085889991043', // Anton
+            'pekanbaru'     => '08126876113',  // Angga
+            'bali'          => '081286355557', // Eko
+        ];
+
+        $key = strtolower(trim(str_replace('MAC ', '', (string) $nama_cabang)));
+
+        if (isset($pic_cabang[$key])) {
+            $target[] = $pic_cabang[$key];
+        }
+
+        // Hindari nomor ganda
+        return array_values(array_unique($target));
+    }
+
     // ── HELPER: KIRIM WA KE ADMIN ─────────────────────────────
     private function _kirim_wa_booking_admin($booking_id)
     {
@@ -832,13 +863,16 @@ class Movas extends CI_Controller
         $pesan .= "🔗 Detail Booking :\n      {$mac_url}mac_booking/detail/{$booking_id}\n\n";
         $pesan .= "*MOVAS — Mobile Vehicle Assistant*";
 
-        // Kirim via Fonnte
+        // ── Daftar nomor admin penerima ────────────────────────
+        $target_admin = $this->_target_wa_booking($booking['nama_cabang'] ?? '');
+
+        // Kirim via Fonnte (beberapa nomor dipisah koma)
         $fonnte_token = $this->config->item('fonnte_token');
         $ch = curl_init('https://api.fonnte.com/send');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, [
-            'target'  => '082324001500',
+            'target'  => implode(',', $target_admin),
             'message' => $pesan,
         ]);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: ' . $fonnte_token]);
@@ -1051,8 +1085,11 @@ class Movas extends CI_Controller
         $ch = curl_init('https://api.fonnte.com/send');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
+
+        $target_admin = $this->_target_wa_booking($booking['nama_cabang'] ?? '');
+
         curl_setopt($ch, CURLOPT_POSTFIELDS, [
-            'target'  => '082324001500',
+            'target'  => implode(',', $target_admin),
             'message' => $pesan,
         ]);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: ' . $fonnte_token]);
