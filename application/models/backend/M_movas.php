@@ -107,14 +107,15 @@ class M_movas extends CI_Model
             'Aus', 'Habis', 'Mati', 'Getas', 'Hilang',
             'Tidak Berfungsi', 'Tidak Ada', 'Perlu Overhaul',
         ];
-        
+
         $kondisi_negatif_perhatian = [
             'Kotor', 'Tipis', 'Lemah', 'Kurang Dingin', 'Kurang',
             'Kendur', 'Berat', 'Perlu Servis', 'Perlu Tune Up',
+            'Tidak Ada (Perlengkapan)',
         ];
 
         // Ambil semua nilai kondisi dari semua tabel
-        $semua_nilai = $this->_get_semua_nilai_kondisi($sesi_id);
+        $semua_nilai = $this->_get_semua_nilai_kondisi($sesi_id, TRUE);
 
         foreach ($semua_nilai as $nilai) {
             if (in_array($nilai, $kondisi_negatif_kritis)) return 'kritis';
@@ -126,7 +127,7 @@ class M_movas extends CI_Model
         return 'aman';
     }
 
-    private function _get_semua_nilai_kondisi($sesi_id)
+    private function _get_semua_nilai_kondisi($sesi_id, $tandai_perlengkapan = FALSE)
     {
         $nilai = [];
         $tabel_list = [
@@ -142,7 +143,17 @@ class M_movas extends CI_Model
                 unset($row['id'], $row['sesi_id'], $row['created_at'],
                       $row['updated_at'], $row['accu_tegangan'], $row['accu_merk']);
                 foreach ($row as $v) {
-                    if (!empty($v)) $nilai[] = $v;
+                    if (empty($v)) continue;
+
+                    // "Tidak Ada" di perlengkapan diberi tanda khusus
+                    // supaya tidak dibaca sebagai kritis
+                    if ($tandai_perlengkapan
+                        && $tabel === 'mac_movas_perlengkapan'
+                        && $v === 'Tidak Ada') {
+                        $v = 'Tidak Ada (Perlengkapan)';
+                    }
+
+                    $nilai[] = $v;
                 }
             }
         }
@@ -234,11 +245,11 @@ class M_movas extends CI_Model
         $kritis_list = [
             'Perlu Ganti', 'Rusak', 'Bocor', 'Retak', 'Robek',
             'Aus', 'Habis', 'Mati', 'Getas', 'Hilang',
-            'Tidak Berfungsi', 'Perlu Overhaul',
+            'Tidak Berfungsi', 'Perlu Overhaul', 'Segera Ganti',
         ];
         $perhatian_list = [
             'Kotor', 'Tipis', 'Lemah', 'Kurang Dingin', 'Kurang',
-            'Kendur', 'Berat', 'Perlu Servis', 'Perlu Tune Up',
+            'Kendur', 'Berat', 'Perlu Servis', 'Perlu Tune Up', 'Perlu Perhatian', 'Tidak Ada',
         ];
 
         // Label per kolom
@@ -365,12 +376,22 @@ class M_movas extends CI_Model
 
         $tabel_keys = ['mesin','chassis','kelistrikan','kelistrikan2','safety','eksterior','perlengkapan'];
 
+        // Kata yang dianggap KRITIS hanya di tabel tertentu
+        $kritis_per_tabel = [
+            'kelistrikan' => ['Tidak Ada'],
+            'kelistrikan2' => ['Tidak Ada'],
+            'safety' => ['Tidak Ada'],
+            'eksterior' => ['Tidak Ada'],
+        ];
+
         foreach ($tabel_keys as $tabel) {
             $data = $kondisi_all[$tabel] ?? [];
             foreach ($data as $key => $val) {
                 if (in_array($key, $skip_keys) || empty($val)) continue;
                 $label = $label_map[$key] ?? $key;
                 if (in_array($val, $kritis_list)) {
+                    $rekomendasi[] = ['label' => $label, 'kondisi' => $val, 'level' => 'kritis'];
+                } elseif (in_array($val, $kritis_per_tabel[$tabel] ?? [])) {
                     $rekomendasi[] = ['label' => $label, 'kondisi' => $val, 'level' => 'kritis'];
                 } elseif (in_array($val, $perhatian_list)) {
                     $rekomendasi[] = ['label' => $label, 'kondisi' => $val, 'level' => 'perhatian'];
